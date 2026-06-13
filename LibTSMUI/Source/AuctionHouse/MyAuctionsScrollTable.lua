@@ -36,7 +36,7 @@ local COL_INFO = {
 		font = "BODY_BODY3",
 		sortField = "duration",
 	},
-	highBidder = not LibTSMUI.IsRetail() and {
+	highBidder = {
 		title = HIGH_BIDDER,
 		justifyH = "LEFT",
 		font = "BODY_BODY3",
@@ -112,6 +112,11 @@ end
 function MyAuctionsScrollTable:SetQuery(query)
 	assert(self._settings)
 	assert(query and not self._query)
+	local settings = self:_GetSettingsValue()
+	if not self._sortDisabled and (not COL_INFO[settings.sortCol] or type(settings.sortAscending) ~= "boolean") then
+		settings.sortCol = "item"
+		settings.sortAscending = true
+	end
 	self._query = query
 	query:ResetFilters()
 	if not self._sortDisabled then
@@ -140,7 +145,7 @@ function MyAuctionsScrollTable:SetFilters(name, duration, groups, hasBid, soldOn
 		self._query:Matches("itemName", name)
 	end
 	if duration then
-		if LibTSMUI.IsRetail() then
+		if LibTSMUI.IsModernAuctionHouse() then
 			if duration == 1 then
 				self._query:LessThan("duration", LibTSMUI.GetTime() + (30 * SECONDS_PER_MIN))
 			elseif duration == 2 then
@@ -277,7 +282,7 @@ function MyAuctionsScrollTable.__private:_HandleQueryUpdate()
 		else
 			tinsert(self._data.item, itemTexturePrefix..UIUtils.GetQualityColoredText(itemName, itemQuality))
 			tinsert(self._data.stackSize, stackSize)
-			local bidColor = LibTSMUI.IsRetail() and highBidder ~= "" and Theme.GetColor("INDICATOR"):GetTextColorPrefix() or nil
+			local bidColor = LibTSMUI.IsModernAuctionHouse() and highBidder ~= "" and Theme.GetColor("INDICATOR"):GetTextColorPrefix() or nil
 			tinsert(self._data.currentBid, Money.ToStringForAH(currentBid, bidColor))
 			tinsert(self._data.buyout, Money.ToStringForAH(buyout))
 		end
@@ -288,7 +293,7 @@ function MyAuctionsScrollTable.__private:_HandleQueryUpdate()
 		tinsert(self._data.item_tooltip, itemString)
 		if not isSold and isPending then
 			tinsert(self._data.timeLeft, "...")
-		elseif isSold or LibTSMUI.IsRetail() then
+		elseif isSold or LibTSMUI.IsModernAuctionHouse() then
 			local timeLeft = floor(duration - LibTSMUI.GetTime())
 			local timeLeftStr = nil
 			if timeLeft < SECONDS_PER_MIN then
@@ -303,7 +308,7 @@ function MyAuctionsScrollTable.__private:_HandleQueryUpdate()
 				timeLeftColor = "INDICATOR"
 			elseif timeLeft <= 2 * SECONDS_PER_HOUR then
 				timeLeftColor = "FEEDBACK_RED"
-			elseif timeLeft <= (LibTSMUI.IsRetail() and 24 or 8) * SECONDS_PER_HOUR then
+			elseif timeLeft <= (LibTSMUI.IsModernAuctionHouse() and 24 or 8) * SECONDS_PER_HOUR then
 				timeLeftColor = "FEEDBACK_YELLOW"
 			else
 				timeLeftColor = "FEEDBACK_GREEN"
@@ -320,7 +325,7 @@ function MyAuctionsScrollTable.__private:_HandleQueryUpdate()
 				hasExistingSelection = true
 			elseif not nextSelectionAuctionId then
 				local sortValue = self:_GetSortValue(row)
-				if LibTSMUI.IsRetail() and sortValue == self._selectionSortValue and auctionId > self._selectionAuctionId then
+				if LibTSMUI.IsModernAuctionHouse() and sortValue == self._selectionSortValue and auctionId > self._selectionAuctionId then
 					nextSelectionAuctionId = auctionId
 				elseif sortAscending then
 					nextSelectionAuctionId = sortValue > self._selectionSortValue and auctionId or nil
@@ -360,7 +365,8 @@ function MyAuctionsScrollTable.__private:_GetSortField()
 	if self._sortDisabled then
 		return "index"
 	end
-	local field = COL_INFO[self:_GetSettingsValue().sortCol].sortField
+	local info = COL_INFO[self:_GetSettingsValue().sortCol] or COL_INFO.item
+	local field = info.sortField
 	assert(field)
 	return field
 end

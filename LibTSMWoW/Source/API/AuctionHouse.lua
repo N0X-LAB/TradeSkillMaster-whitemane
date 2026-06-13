@@ -165,7 +165,7 @@ function AuctionHouse.GetOwnedInfo(index)
 			duration = time() + duration
 		end
 	elseif saleStatus == 1 then
-		if not currentBid and LibTSMWoW.IsRetail() then
+		if not currentBid and LibTSMWoW.IsModernAuctionHouse() then
 			-- Sometimes wow doesn't tell us the current bid on sold auctions on retail
 			currentBid = 0
 		end
