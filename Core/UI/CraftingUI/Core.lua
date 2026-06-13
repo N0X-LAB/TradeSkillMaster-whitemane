@@ -130,9 +130,11 @@ function private.CreateMainFrame()
 		:SetMinResize(MIN_FRAME_SIZE.width, MIN_FRAME_SIZE.height)
 		:SetStrata("HIGH")
 		:AddPlayerGold(private.settings)
-		:AddAppStatusIcon(AppHelper.GetRegion(), AppHelper.GetLastSync(), TSM.AuctionDB.GetAppDataUpdateTimes())
 		:AddSwitchButton(private.SwitchBtnOnClick)
 		:SetScript("OnHide", private.BaseFrameOnHide)
+	if AppHelper.IsDesktopAppSupported() then
+		frame:AddAppStatusIcon(AppHelper.GetRegion(), AppHelper.GetLastSync(), TSM.AuctionDB.GetAppDataUpdateTimes())
+	end
 
 	frame:GetElement("content")
 		:SetPadding(0)

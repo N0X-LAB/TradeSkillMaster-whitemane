@@ -1,0 +1,677 @@
+Message: TSM/LibTSMUtil/Source/Reactive/Type/StateSchema.lua:203: Invalid type for state key (findResult): 23
+Time: 06/13/26 09:04:06 (1781334246)
+Client: 4.4.2 (60895)
+Locale: enUS
+Combat: false
+Error Count: 1
+Stack Trace:
+  TSM/LibTSMUtil/Source/Reactive/Type/StateSchema.lua:203 <ReactiveStateSchema._ValidateValueForKey>
+    self = {
+      _committed = true
+      _name = "AUCTION_BUY_SCAN_STATE"
+    }
+    key = "findResult"
+    value = 23
+    skipValidateFunc = nil
+    fieldType = "table"
+    validateFunc = nil
+    isEnum = false
+    self = <ReactiveStateSchema:000002AC1EF15B80> {}
+  TSM/External/LibTSMClass/LibTSMClass.lua:343 <_ValidateValueForKey>
+    inst = {
+      _isEnum = {}
+      _validateFunc = {}
+      _fieldType = {}
+      _isOptional = {}
+      _default = {}
+      _committed = true
+      _name = "AUCTION_BUY_SCAN_STATE"
+    }
+    instInfo = {
+      str = "ReactiveStateSchema:000002AC1EF15B80"
+      fields = {}
+      closures = {}
+      hasSuperclass = false
+      isClassLookup = {}
+      class = {}
+      methodClass = {}
+    }
+    prevMethodClass = nil
+    isPrivate = false
+    classInfo = {
+      subclassed = false
+      superStatic = {}
+      static = {}
+      abstract = false
+      name = "ReactiveStateSchema"
+      inClassFunc = 1
+      methodProperties = {}
+    }
+    key = "_ValidateValueForKey"
+    isProtected = false
+  TSM/LibTSMUtil/Source/Reactive/Type/State.lua:212 <State.lua:206>
+    key = "findResult"
+    value = 23
+    context = {
+      handlingDataChange = false
+      dataChangeTemp = {}
+      dataChangeQueue = {}
+      publishers = {}
+      autoStorePaused = false
+      schema = {}
+      data = {}
+    }
+    data = {
+      isSearchingForSelection = true
+      cancelShown = false
+      scanTypeName = "Browse"
+      bottomFrame = {}
+      findHashIsSelection = true
+      isConfirming = false
+      selectionCanBuy = true
+      numBid = 0
+      postDuration = 2
+      auctionScrollTable = {}
+      selectionCanPost = false
+      selectionChanging = false
+      numBidOrBought = 0
+      scanIsPaused = true
+      defaultBuyQuantity = 0
+      canCancel = false
+      numCanBuy = 0
+      numFound = 0
+      searchContext = {}
+      findHash = "52082~508799~182450~Historia"
+      selectionCanBid = false
+      selectedAuction = {}
+      numBought = 0
+      scanType = {}
+      canSendAuctionQuery = true
+      lastBuyQuantity = 0
+      scanNumItems = 186
+      maxQuantity = 0
+      postDialogShown = false
+      numConfirmed = 0
+      canPost = false
+      selectionCanCancel = false
+      auctionScan = {}
+      scanProgress = 0.027419
+    }
+    private = {
+      nextPublisherId = 1799
+    }
+  TSM/LibTSMUI/Source/AuctionHouse/AuctionBuyScan.lua:546 <AuctionBuyScan.lua:298>
+    manager = {
+      _suppressedLogs = {}
+      _callbackFuncs = {}
+      _name = "AUCTION_BUY_Browse"
+      _futureAction = {}
+      _state = {}
+      _cancellables = {}
+      _suppressAllLogs = false
+      _futureStateKey = {}
+    }
+    action = "ACTION_HANDLE_FIND_RESULT"
+    result = 23
+    itemString = "i:52082"
+    maxQuantity = nil
+    (*temporary) = false
+    (*temporary) = false
+    (*temporary) = false
+    (*temporary) = true
+    SCAN_TYPE = {
+      SNIPER = {}
+      BROWSE = {}
+    }
+    LibTSMUI = {
+      _lateUnload = {}
+      _dependencies = {}
+      Locale = {}
+      _loadOrder = {}
+      _initOrder = {}
+      _classTypes = {}
+      _name = "LibTSMUI"
+      _moduleContext = {}
+    }
+  TSM/External/LibTSMClass/LibTSMClass.lua:343 <AuctionBuyScan._actionHandler>
+    inst = {
+      _selectionDelayTimer = {}
+      _restartDelayTimer = {}
+      _manager = {}
+      _state = {}
+      _selectionPostContext = {}
+    }
+    instInfo = {
+      str = "AuctionBuyScan:000002AB86EF0060"
+      fields = {}
+      closures = {}
+      hasSuperclass = false
+      isClassLookup = {}
+      class = {}
+      methodClass = {}
+    }
+    isPrivate = true
+    classInfo = {
+      subclassed = false
+      superStatic = {}
+      static = {}
+      abstract = false
+      name = "AuctionBuyScan"
+      inClassFunc = 2
+      methodProperties = {}
+    }
+    key = "_ActionHandler"
+    isProtected = false
+    self = <AuctionBuyScan:000002AB86EF0060> {}
+  TSM/External/LibTSMClass/LibTSMClass.lua:564 <_actionHandler>
+    prevClass = nil
+    instInfo = {
+      str = "AuctionBuyScan:000002AB86EF0060"
+      fields = {}
+      closures = {}
+      hasSuperclass = false
+      isClassLookup = {}
+      class = {}
+      methodClass = {}
+    }
+    inst = {
+      _selectionDelayTimer = {}
+      _restartDelayTimer = {}
+      _manager = {}
+      _state = {}
+      _selectionPostContext = {}
+    }
+    methodClassInfo = {
+      subclassed = false
+      superStatic = {}
+      static = {}
+      abstract = false
+      name = "AuctionBuyScan"
+      inClassFunc = 2
+      methodProperties = {}
+    }
+  TSM/LibTSMUtil/Source/UI/UIManager.lua:104 <UIManager.lua:99>
+    self = {
+      _name = "AUCTION_BUY_Browse"
+      _suppressAllLogs = false
+    }
+    action = "ACTION_HANDLE_FIND_RESULT"
+  TSM/External/LibTSMClass/LibTSMClass.lua:343 <LibTSMClass.lua:329>
+    inst = {
+      _suppressedLogs = {}
+      _callbackFuncs = {}
+      _name = "AUCTION_BUY_Browse"
+      _futureAction = {}
+      _state = {}
+      _cancellables = {}
+      _suppressAllLogs = false
+      _futureStateKey = {}
+    }
+    instInfo = {
+      str = "UIManager:000002AB86EF0BF0"
+      fields = {}
+      closures = {}
+      hasSuperclass = false
+      isClassLookup = {}
+      class = {}
+      methodClass = {}
+    }
+    prevMethodClass = nil
+    isPrivate = false
+    classInfo = {
+      subclassed = false
+      superStatic = {}
+      static = {}
+      abstract = false
+      name = "UIManager"
+      inClassFunc = 1
+      methodProperties = {}
+    }
+    key = "ProcessAction"
+    isProtected = false
+  TSM/LibTSMService/Source/AuctionScan/Classes/FindThread.lua:95 <_callback>
+    private = {
+      isRunning = false
+      threadId = "AUCTION_SCAN_FIND-function: 000002AB8BAE1B98"
+    }
+  TSM/LibTSMTypes/Source/Threading/Classes/Thread.lua:221 <Thread.Run>
+    self = {
+      _startCaller = "TSM\LibTSMTypes\Source\Threading\Threading.lua:56"
+      _startTime = 1781334240.529907
+      _wasNormalExit = false
+      _endTime = 1781334246.314507
+      _co = <no value>
+      _createCaller = "TSM\LibTSMService\Source\AuctionScan\Classes\FindThread.lua:32"
+      _name = "AUCTION_SCAN_FIND"
+      _realTimeUsed = 5.783683
+      _cpuTimeUsed = 0.000682
+    }
+    quantum = 0.001000
+    startTime = 1781334246.313507
+    noErr = true
+    elapsedTime = 0.000193
+    STATE = {
+      FORCED_YIELD = {}
+      READY = {}
+      DEAD = {}
+      WAITING_FOR_WAITER = {}
+      RUNNING = {}
+      SENDING_SYNC_MESSAGE = {}
+      SLEEPING = {}
+      WAITING_FOR_MSG = {}
+    }
+    LibTSMTypes = {
+      _dependencies = {}
+      _lateUnload = {}
+      _loadOrder = {}
+      _initOrder = {}
+      _classTypes = {}
+      _name = "LibTSMTypes"
+      _moduleContext = {}
+    }
+    self = <Thread:000002AC02AFB830> {}
+  TSM/External/LibTSMClass/LibTSMClass.lua:343 <Run>
+    inst = {
+      _startCaller = "TSM\LibTSMTypes\Source\Threading\Threading.lua:56"
+      _guardedQueries = {}
+      _startTime = 1781334240.529907
+      _returnValue = {}
+      _wasNormalExit = false
+      _endTime = 1781334246.314507
+      _functionWaiter = {}
+      _co = <no value>
+      _createCaller = "TSM\LibTSMService\Source\AuctionScan\Classes\FindThread.lua:32"
+      _name = "AUCTION_SCAN_FIND"
+      _realTimeUsed = 5.783683
+      _eventWaiter = {}
+      _futureWaiter = {}
+      _messages = {}
+      _state = {}
+      _cpuTimeUsed = 0.000682
+    }
+    instInfo = {
+      str = "Thread:000002AC02AFB830"
+      fields = {}
+      closures = {}
+      hasSuperclass = false
+      isClassLookup = {}
+      class = {}
+      methodClass = {}
+    }
+    prevMethodClass = nil
+    isPrivate = false
+    classInfo = {
+      subclassed = false
+      superStatic = {}
+      static = {}
+      abstract = false
+      name = "Thread"
+      inClassFunc = 10
+      methodProperties = {}
+    }
+    key = "Run"
+    isProtected = false
+  TSM/LibTSMTypes/Source/Threading/Classes/Scheduler.lua:79 <Run>
+    totalTime = 0.002000
+    numReadyThreads = 2
+    remainingTime = 0.002000
+    ranThread = false
+    (for index) = 2
+    (for limit) = 1
+    (for step) = -1
+    i = 2
+    thread = {
+      _startCaller = "TSM\LibTSMTypes\Source\Threading\Threading.lua:56"
+      _guardedQueries = {}
+      _startTime = 1781334240.529907
+      _returnValue = {}
+      _wasNormalExit = false
+      _endTime = 1781334246.314507
+      _functionWaiter = {}
+      _co = <no value>
+      _createCaller = "TSM\LibTSMService\Source\AuctionScan\Classes\FindThread.lua:32"
+      _name = "AUCTION_SCAN_FIND"
+      _realTimeUsed = 5.783683
+      _eventWaiter = {}
+      _futureWaiter = {}
+      _messages = {}
+      _state = {}
+      _cpuTimeUsed = 0.000682
+    }
+    quantum = 0.001000
+    EXCESSIVE_TIME_USED_RATIO = 1.200000
+    EXCESSIVE_TIME_LOG_THRESHOLD = 0.100000
+  TSM/LibTSMTypes/Source/Threading/Threading.lua:162 <RunScheduler>
+    totalTime = 0.002000
+    startTime = 1781334246.313425
+    LibTSMTypes = {
+      _dependencies = {}
+      _lateUnload = {}
+      _loadOrder = {}
+      _initOrder = {}
+      _classTypes = {}
+      _name = "LibTSMTypes"
+      _moduleContext = {}
+    }
+    TIME_WARNING_THRESHOLD = 0.100000
+  TSM/LibTSMApp/Source/Config/ThreadingConfig.lua:34 <ThreadingConfig.lua:29>
+    _ = Frame {}
+    elapsed = 0.008000
+    ClientInfo = {
+      FEATURES = {}
+    }
+    MAX_TIME_USAGE_RATIO = 0.250000
+    MAX_QUANTUM = 0.010000
+Temp Tables:
+  [2] ?
+Object Pools:
+  UI_ActionButton (8 created, 8 in use)
+    [8] ???
+  PUBLISHER (1882 created, 1573 in use)
+    [1573] ???
+  UI_TabGroup (1 created, 0 in use)
+    <none>
+  UI_LargeApplicationFrame (1 created, 1 in use)
+    <none>
+  UI_ApplicationGroupTree (1 created, 0 in use)
+    <none>
+  LIST_ROWS (47 created, 31 in use)
+    [31] ???
+  UI_ScrollFrame (1 created, 1 in use)
+    <none>
+  COOLDOWN_TASK (0 created, 0 in use)
+    <none>
+  AUCTION_SCAN_RESULT_SUB_ROW (10 created, 10 in use)
+    [10] ???
+  DATABASE_QUERIES (46 created, 43 in use)
+    [43] ???
+  UI_Frame (19 created, 11 in use)
+    [11] ???
+  UI_Text (3 created, 3 in use)
+    [3] ???
+  UI_ProgressBar (1 created, 1 in use)
+    <none>
+  AUCTION_SCAN_QUERY (186 created, 186 in use)
+    [186] ???
+  AUCTION_SCAN_RESULT_ROW (4 created, 4 in use)
+    [4] ???
+  UI_DividedContainer (1 created, 0 in use)
+    <none>
+  UI_Texture (5 created, 3 in use)
+    [3] ???
+  EXPIRING_MAIL_TASK (0 created, 0 in use)
+    <none>
+  TOOLTIP_ENTRY (39 created, 39 in use)
+    [39] ???
+  UI_FlashingButton (4 created, 4 in use)
+    [4] ???
+  GATHERING_ALT_TASK (0 created, 0 in use)
+    <none>
+  UI_SearchList (1 created, 0 in use)
+    <none>
+  UI_HorizontalLine (3 created, 2 in use)
+    [2] ???
+  UI_DestroyingScrollTable (1 created, 1 in use)
+    <none>
+  AUCTION_SCAN_MANAGER (1 created, 1 in use)
+    <none>
+  DATABASE_QUERY_CLAUSES (105 created, 98 in use)
+    [98] ???
+  UI_ViewContainer (2 created, 1 in use)
+    <none>
+  UI_PlayerGoldText (1 created, 1 in use)
+    <none>
+  UI_Spacer (2 created, 2 in use)
+    [2] ???
+  UI_ApplicationFrame (1 created, 1 in use)
+    <none>
+  UI_VerticalLine (1 created, 1 in use)
+    <none>
+  DATABASE_SCHEMAS (1 created, 0 in use)
+    <none>
+  EXPIRED_AUCTION_TASK (1 created, 0 in use)
+    <none>
+  MENU_DIALOG_DATA (0 created, 0 in use)
+    <none>
+  DATABASE_ROW (128 created, 93 in use)
+    [93] ???
+  UI_Input (2 created, 1 in use)
+    <none>
+  UI_ApplicationGroupTreeWithControls (1 created, 0 in use)
+    <none>
+  UI_AuctionScrollTable (1 created, 1 in use)
+    <none>
+  UI_Button (20 created, 15 in use)
+    [15] ???
+Running Threads:
+  GROUP_SEARCH
+    Ready
+    Running for 20.5 seconds (CPU: 0ms, 0.42%)
+    Created @TSM\Core\Service\Shopping\GroupSearch.lua:39
+    Started @TSM\LibTSMTypes\Source\Threading\Threading.lua:56
+    Backtrace:
+      TSM\LibTSMTypes\Source\Threading\Threading.lua:104
+      TSM\LibTSMService\Source\AuctionScan\Classes\ScanManager.lua:468
+      TSM\LibTSMService\Source\AuctionScan\Classes\ScanManager.lua:550
+      TSM\LibTSMService\Source\AuctionScan\Classes\ScanManager.lua:240
+      TSM\Core\Service\Shopping\GroupSearch.lua:83
+      TSM\LibTSMTypes\Source\Threading\Classes\Thread.lua:434
+Debug Log:
+  09:04:06.680 [ERR] {ErrorHandler.lua:167} TSM/LibTSMUtil/Source/Reactive/Type/StateSchema.lua:203: Invalid type for state key (findResult): 23
+  09:04:06.313 [INFO] {Lock.lua:53} Ended scan (Browse)
+  09:04:06.313 [INFO] {UIManager:AUCTION_BUY_Browse} Handling action ACTION_HANDLE_FIND_RESULT (23)
+  09:04:06.313 [INFO] {Thread.lua:446|AUCTION_SCAN_FIND} Thread finished: AUCTION_SCAN_FIND [0.0%]
+  09:04:06.306 [INFO] {Scanner.lua:56} [AUCTION_SCANNER_FSM] EV_CANCEL
+  09:04:06.297 [INFO] {Scanner.lua:61} [AUCTION_SCANNER_FSM] EV_SEARCH_RESULTS_UPDATED
+  09:04:06.297 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] ST_SEARCH_DONE -> ST_INIT
+  09:04:06.296 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] ST_SEARCH_CHECKING -> ST_SEARCH_DONE
+  09:04:06.288 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] ST_SEARCH_REQUEST_MORE -> ST_SEARCH_CHECKING
+  09:04:06.288 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] ST_SEARCH_SEND -> ST_SEARCH_REQUEST_MORE
+  09:04:06.288 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] EV_FUTURE_SUCCESS
+  09:04:06.288 [INFO] {Analytics.lua:93} AC AH_API_TIME US-BCC-Gilneas SendSearchQuery 3233
+  09:04:06.287 [INFO] {AuctionHouseWrapper.lua:993} COMMODITY_SEARCH_RESULTS_UPDATED (52082)
+  09:04:06.287 [INFO] {AuctionHouseWrapper.lua:983} AUCTION_HOUSE_THROTTLED_MESSAGE_RESPONSE_RECEIVED ()
+  09:04:06.287 [INFO] {AuctionHouseWrapper.lua:988} AUCTION_HOUSE_NEW_RESULTS_RECEIVED ({itemID=52082,itemLevel=81})
+  09:04:06.034 [INFO] {AuctionHouseWrapper.lua:988} AUCTION_HOUSE_THROTTLED_MESSAGE_SENT ()
+  09:04:03.056 [INFO] {AuctionHouseWrapper.lua:677} SendSearchQuery({itemID=52082},{},true)
+  09:04:03.056 [INFO] {AuctionHouseWrapper.lua:988} AUCTION_HOUSE_THROTTLED_MESSAGE_QUEUED ()
+  09:04:03.029 [INFO] {Scanner.lua:64} [AUCTION_SCANNER_FSM] EV_SEARCH_RESULTS_UPDATED
+  09:04:03.029 [INFO] {AuctionHouseWrapper.lua:993} ITEM_SEARCH_RESULTS_UPDATED ({itemID=20821})
+  09:04:03.028 [INFO] {AuctionHouseWrapper.lua:983} AUCTION_HOUSE_THROTTLED_MESSAGE_RESPONSE_RECEIVED ()
+  09:04:03.028 [INFO] {AuctionHouseWrapper.lua:988} AUCTION_HOUSE_NEW_RESULTS_RECEIVED ({itemID=20821})
+  09:04:02.841 [INFO] {AuctionHouseWrapper.lua:988} AUCTION_HOUSE_THROTTLED_MESSAGE_SENT ()
+  09:04:02.554 [ERR] {Scanner.lua:273} Failed to send search query - retrying
+  09:04:02.554 [ERR] {AuctionHouseWrapper.lua:1003} Another wrapper is pending (SendSellSearchQuery)
+  09:04:02.049 [ERR] {Scanner.lua:273} Failed to send search query - retrying
+  09:04:02.049 [ERR] {AuctionHouseWrapper.lua:1003} Another wrapper is pending (SendSellSearchQuery)
+  09:04:01.548 [ERR] {Scanner.lua:273} Failed to send search query - retrying
+  09:04:01.548 [ERR] {AuctionHouseWrapper.lua:1003} Another wrapper is pending (SendSellSearchQuery)
+  09:04:01.044 [ERR] {Scanner.lua:273} Failed to send search query - retrying
+  09:04:01.044 [ERR] {AuctionHouseWrapper.lua:1003} Another wrapper is pending (SendSellSearchQuery)
+  09:04:00.538 [ERR] {Scanner.lua:273|AUCTION_SCAN_FIND} Failed to send search query - retrying
+  09:04:00.538 [ERR] {AuctionHouseWrapper.lua:1003|AUCTION_SCAN_FIND} Another wrapper is pending (SendSellSearchQuery)
+  09:04:00.538 [INFO] {Scanner.lua:423|AUCTION_SCAN_FIND} [AUCTION_SCANNER_FSM] ST_SEARCH_GET_KEY -> ST_SEARCH_SEND
+  09:04:00.537 [INFO] {Scanner.lua:423|AUCTION_SCAN_FIND} [AUCTION_SCANNER_FSM] ST_INIT -> ST_SEARCH_GET_KEY
+  09:04:00.537 [INFO] {Scanner.lua:423|AUCTION_SCAN_FIND} [AUCTION_SCANNER_FSM] EV_START_SEARCH
+  09:04:00.521 [INFO] {Lock.lua:41|GROUP_SEARCH} Starting scan (Browse)
+  09:04:00.520 [INFO] {UIManager:AUCTION_BUY_Browse|GROUP_SEARCH} Handling action ACTION_FIND_SELECTED_AUCTION ()
+  09:04:00.511 [INFO] {Scanner.lua:56} [AUCTION_SCANNER_FSM] ST_CANCELING -> ST_INIT
+  09:04:00.510 [INFO] {Scanner.lua:56} [AUCTION_SCANNER_FSM] ST_SEARCH_SEND -> ST_CANCELING
+  09:04:00.510 [INFO] {Scanner.lua:56} [AUCTION_SCANNER_FSM] EV_CANCEL
+  09:04:00.509 [INFO] {UIManager:AUCTION_BUY_Browse} Handling action ACTION_PAUSE_SCAN ()
+  09:04:00.508 [INFO] {UIManager:AUCTION_BUY_Browse} Handling action ACTION_SET_SELECTED_AUCTION (AuctionSubRow:000002AB8A9CEBE0)
+  09:04:00.508 [INFO] {UIManager:AUCTION_BUY_Browse} Handling action ACTION_AUCTION_SELECTION_CHANGED_DELAYED ()
+  09:03:59.872 [INFO] {AuctionHouseWrapper.lua:677|GROUP_SEARCH} SendSellSearchQuery({itemID=20821},{},true)
+  09:03:59.872 [INFO] {AuctionHouseWrapper.lua:988|GROUP_SEARCH} AUCTION_HOUSE_THROTTLED_MESSAGE_QUEUED ()
+  09:03:59.871 [INFO] {Scanner.lua:423|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_SEARCH_GET_KEY -> ST_SEARCH_SEND
+  09:03:59.871 [INFO] {Scanner.lua:423|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_INIT -> ST_SEARCH_GET_KEY
+  09:03:59.871 [INFO] {Scanner.lua:423|GROUP_SEARCH} [AUCTION_SCANNER_FSM] EV_START_SEARCH
+  09:03:59.863 [INFO] {Scanner.lua:56} [AUCTION_SCANNER_FSM] EV_CANCEL
+  09:03:59.854 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_BROWSE_DONE -> ST_INIT
+  09:03:59.854 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_BROWSE_CHECKING -> ST_BROWSE_DONE
+  09:03:59.851 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_INIT -> ST_BROWSE_CHECKING
+  09:03:59.851 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] EV_START_BROWSE_NO_SCAN
+  09:03:59.832 [INFO] {Scanner.lua:56} [AUCTION_SCANNER_FSM] EV_CANCEL
+  09:03:59.820 [INFO] {Scanner.lua:61} [AUCTION_SCANNER_FSM] EV_SEARCH_RESULTS_UPDATED
+  09:03:59.820 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] ST_SEARCH_DONE -> ST_INIT
+  09:03:59.820 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] ST_SEARCH_CHECKING -> ST_SEARCH_DONE
+  09:03:59.816 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] ST_SEARCH_REQUEST_MORE -> ST_SEARCH_CHECKING
+  09:03:59.816 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] ST_SEARCH_SEND -> ST_SEARCH_REQUEST_MORE
+  09:03:59.816 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] EV_FUTURE_SUCCESS
+  09:03:59.816 [INFO] {Analytics.lua:93} AC AH_API_TIME US-BCC-Gilneas SendSearchQuery 3098
+  09:03:59.816 [INFO] {AuctionHouseWrapper.lua:993} COMMODITY_SEARCH_RESULTS_UPDATED (41375)
+  09:03:59.815 [INFO] {AuctionHouseWrapper.lua:983} AUCTION_HOUSE_THROTTLED_MESSAGE_RESPONSE_RECEIVED ()
+  09:03:59.815 [INFO] {AuctionHouseWrapper.lua:988} AUCTION_HOUSE_NEW_RESULTS_RECEIVED ({itemID=41375,itemLevel=80})
+  09:03:59.633 [INFO] {AuctionHouseWrapper.lua:988} AUCTION_HOUSE_THROTTLED_MESSAGE_SENT ()
+  09:03:56.719 [INFO] {AuctionHouseWrapper.lua:677|GROUP_SEARCH} SendSearchQuery({itemID=41375},{},true)
+  09:03:56.718 [INFO] {AuctionHouseWrapper.lua:988|GROUP_SEARCH} AUCTION_HOUSE_THROTTLED_MESSAGE_QUEUED ()
+  09:03:56.718 [INFO] {Scanner.lua:423|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_SEARCH_GET_KEY -> ST_SEARCH_SEND
+  09:03:56.718 [INFO] {Scanner.lua:423|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_INIT -> ST_SEARCH_GET_KEY
+  09:03:56.718 [INFO] {Scanner.lua:423|GROUP_SEARCH} [AUCTION_SCANNER_FSM] EV_START_SEARCH
+  09:03:56.710 [INFO] {Scanner.lua:56} [AUCTION_SCANNER_FSM] EV_CANCEL
+  09:03:56.702 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_BROWSE_DONE -> ST_INIT
+  09:03:56.702 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_BROWSE_CHECKING -> ST_BROWSE_DONE
+  09:03:56.698 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_INIT -> ST_BROWSE_CHECKING
+  09:03:56.698 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] EV_START_BROWSE_NO_SCAN
+  09:03:56.690 [INFO] {Scanner.lua:56} [AUCTION_SCANNER_FSM] EV_CANCEL
+  09:03:56.682 [INFO] {Scanner.lua:61} [AUCTION_SCANNER_FSM] ST_SEARCH_DONE -> ST_INIT
+  09:03:56.682 [INFO] {Scanner.lua:61} [AUCTION_SCANNER_FSM] ST_SEARCH_CHECKING -> ST_SEARCH_DONE
+  09:03:56.677 [INFO] {Scanner.lua:61} [AUCTION_SCANNER_FSM] ST_SEARCH_CHECKING -> ST_SEARCH_CHECKING
+  09:03:56.677 [INFO] {Scanner.lua:61} [AUCTION_SCANNER_FSM] EV_SEARCH_RESULTS_UPDATED
+  09:03:56.677 [INFO] {AuctionHouseWrapper.lua:993} COMMODITY_SEARCH_RESULTS_UPDATED (39955)
+  09:03:56.632 [INFO] {Scanner.lua:61} [AUCTION_SCANNER_FSM] ST_SEARCH_CHECKING -> ST_SEARCH_CHECKING
+  09:03:56.632 [INFO] {Scanner.lua:61} [AUCTION_SCANNER_FSM] EV_SEARCH_RESULTS_UPDATED
+  09:03:56.632 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] ST_SEARCH_REQUEST_MORE -> ST_SEARCH_CHECKING
+  09:03:56.631 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] ST_SEARCH_SEND -> ST_SEARCH_REQUEST_MORE
+  09:03:56.631 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] EV_FUTURE_SUCCESS
+  09:03:56.631 [INFO] {Analytics.lua:93} AC AH_API_TIME US-BCC-Gilneas SendSearchQuery 3130
+  09:03:56.631 [INFO] {AuctionHouseWrapper.lua:993} COMMODITY_SEARCH_RESULTS_UPDATED (39955)
+  09:03:56.630 [INFO] {AuctionHouseWrapper.lua:983} AUCTION_HOUSE_THROTTLED_MESSAGE_RESPONSE_RECEIVED ()
+  09:03:56.630 [INFO] {AuctionHouseWrapper.lua:988} AUCTION_HOUSE_NEW_RESULTS_RECEIVED ({itemID=39955,itemLevel=70})
+  09:03:56.429 [INFO] {AuctionHouseWrapper.lua:988} AUCTION_HOUSE_THROTTLED_MESSAGE_SENT ()
+  09:03:53.503 [INFO] {AuctionHouseWrapper.lua:677|GROUP_SEARCH} SendSearchQuery({itemID=39955},{},true)
+  09:03:53.502 [INFO] {AuctionHouseWrapper.lua:988|GROUP_SEARCH} AUCTION_HOUSE_THROTTLED_MESSAGE_QUEUED ()
+  09:03:53.502 [INFO] {Scanner.lua:423|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_SEARCH_GET_KEY -> ST_SEARCH_SEND
+  09:03:53.502 [INFO] {Scanner.lua:423|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_INIT -> ST_SEARCH_GET_KEY
+  09:03:53.502 [INFO] {Scanner.lua:423|GROUP_SEARCH} [AUCTION_SCANNER_FSM] EV_START_SEARCH
+  09:03:53.494 [INFO] {Scanner.lua:56} [AUCTION_SCANNER_FSM] EV_CANCEL
+  09:03:53.486 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_BROWSE_DONE -> ST_INIT
+  09:03:53.485 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_BROWSE_CHECKING -> ST_BROWSE_DONE
+  09:03:53.482 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_INIT -> ST_BROWSE_CHECKING
+  09:03:53.482 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] EV_START_BROWSE_NO_SCAN
+  09:03:53.474 [INFO] {Scanner.lua:56} [AUCTION_SCANNER_FSM] EV_CANCEL
+  09:03:53.466 [INFO] {Scanner.lua:61} [AUCTION_SCANNER_FSM] ST_SEARCH_DONE -> ST_INIT
+  09:03:53.466 [INFO] {Scanner.lua:61} [AUCTION_SCANNER_FSM] ST_SEARCH_CHECKING -> ST_SEARCH_DONE
+  09:03:53.461 [INFO] {Scanner.lua:61} [AUCTION_SCANNER_FSM] ST_SEARCH_CHECKING -> ST_SEARCH_CHECKING
+  09:03:53.461 [INFO] {Scanner.lua:61} [AUCTION_SCANNER_FSM] EV_SEARCH_RESULTS_UPDATED
+  09:03:53.461 [INFO] {AuctionHouseWrapper.lua:993} COMMODITY_SEARCH_RESULTS_UPDATED (52082)
+  09:03:53.429 [INFO] {Scanner.lua:61} [AUCTION_SCANNER_FSM] ST_SEARCH_CHECKING -> ST_SEARCH_CHECKING
+  09:03:53.429 [INFO] {Scanner.lua:61} [AUCTION_SCANNER_FSM] EV_SEARCH_RESULTS_UPDATED
+  09:03:53.427 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] ST_SEARCH_REQUEST_MORE -> ST_SEARCH_CHECKING
+  09:03:53.426 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] ST_SEARCH_SEND -> ST_SEARCH_REQUEST_MORE
+  09:03:53.426 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] EV_FUTURE_SUCCESS
+  09:03:53.426 [INFO] {Analytics.lua:93} AC AH_API_TIME US-BCC-Gilneas SendSearchQuery 3115
+  09:03:53.426 [INFO] {AuctionHouseWrapper.lua:993} COMMODITY_SEARCH_RESULTS_UPDATED (52082)
+  09:03:53.425 [INFO] {AuctionHouseWrapper.lua:983} AUCTION_HOUSE_THROTTLED_MESSAGE_RESPONSE_RECEIVED ()
+  09:03:53.425 [INFO] {AuctionHouseWrapper.lua:988} AUCTION_HOUSE_NEW_RESULTS_RECEIVED ({itemID=52082,itemLevel=81})
+  09:03:53.225 [INFO] {AuctionHouseWrapper.lua:988} AUCTION_HOUSE_THROTTLED_MESSAGE_SENT ()
+  09:03:50.313 [INFO] {AuctionHouseWrapper.lua:677|GROUP_SEARCH} SendSearchQuery({itemID=52082},{},true)
+  09:03:50.313 [INFO] {AuctionHouseWrapper.lua:988|GROUP_SEARCH} AUCTION_HOUSE_THROTTLED_MESSAGE_QUEUED ()
+  09:03:50.313 [INFO] {Scanner.lua:423|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_SEARCH_GET_KEY -> ST_SEARCH_SEND
+  09:03:50.313 [INFO] {Scanner.lua:423|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_INIT -> ST_SEARCH_GET_KEY
+  09:03:50.312 [INFO] {Scanner.lua:423|GROUP_SEARCH} [AUCTION_SCANNER_FSM] EV_START_SEARCH
+  09:03:50.302 [INFO] {Scanner.lua:56} [AUCTION_SCANNER_FSM] EV_CANCEL
+  09:03:50.293 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_BROWSE_DONE -> ST_INIT
+  09:03:50.293 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_BROWSE_CHECKING -> ST_BROWSE_DONE
+  09:03:50.291 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_INIT -> ST_BROWSE_CHECKING
+  09:03:50.291 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] EV_START_BROWSE_NO_SCAN
+  09:03:50.280 [INFO] {Scanner.lua:56} [AUCTION_SCANNER_FSM] EV_CANCEL
+  09:03:50.271 [INFO] {Scanner.lua:61} [AUCTION_SCANNER_FSM] ST_SEARCH_DONE -> ST_INIT
+  09:03:50.270 [INFO] {Scanner.lua:61} [AUCTION_SCANNER_FSM] ST_SEARCH_CHECKING -> ST_SEARCH_DONE
+  09:03:50.267 [INFO] {Scanner.lua:61} [AUCTION_SCANNER_FSM] ST_SEARCH_CHECKING -> ST_SEARCH_CHECKING
+  09:03:50.267 [INFO] {Scanner.lua:61} [AUCTION_SCANNER_FSM] EV_SEARCH_RESULTS_UPDATED
+  09:03:50.267 [INFO] {AuctionHouseWrapper.lua:993} COMMODITY_SEARCH_RESULTS_UPDATED (52098)
+  09:03:50.222 [INFO] {Scanner.lua:61} [AUCTION_SCANNER_FSM] ST_SEARCH_CHECKING -> ST_SEARCH_CHECKING
+  09:03:50.221 [INFO] {Scanner.lua:61} [AUCTION_SCANNER_FSM] EV_SEARCH_RESULTS_UPDATED
+  09:03:50.220 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] ST_SEARCH_REQUEST_MORE -> ST_SEARCH_CHECKING
+  09:03:50.220 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] ST_SEARCH_SEND -> ST_SEARCH_REQUEST_MORE
+  09:03:50.220 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] EV_FUTURE_SUCCESS
+  09:03:50.220 [INFO] {Analytics.lua:93} AC AH_API_TIME US-BCC-Gilneas SendSearchQuery 3166
+  09:03:50.219 [INFO] {AuctionHouseWrapper.lua:993} COMMODITY_SEARCH_RESULTS_UPDATED (52098)
+  09:03:50.218 [INFO] {AuctionHouseWrapper.lua:983} AUCTION_HOUSE_THROTTLED_MESSAGE_RESPONSE_RECEIVED ()
+  09:03:50.218 [INFO] {AuctionHouseWrapper.lua:988} AUCTION_HOUSE_NEW_RESULTS_RECEIVED ({itemID=52098,itemLevel=81})
+  09:03:50.033 [INFO] {AuctionHouseWrapper.lua:988} AUCTION_HOUSE_THROTTLED_MESSAGE_SENT ()
+  09:03:47.054 [INFO] {AuctionHouseWrapper.lua:677|GROUP_SEARCH} SendSearchQuery({itemID=52098},{},true)
+  09:03:47.054 [INFO] {AuctionHouseWrapper.lua:988|GROUP_SEARCH} AUCTION_HOUSE_THROTTLED_MESSAGE_QUEUED ()
+  09:03:47.054 [INFO] {Scanner.lua:423|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_SEARCH_GET_KEY -> ST_SEARCH_SEND
+  09:03:47.054 [INFO] {Scanner.lua:423|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_INIT -> ST_SEARCH_GET_KEY
+  09:03:47.054 [INFO] {Scanner.lua:423|GROUP_SEARCH} [AUCTION_SCANNER_FSM] EV_START_SEARCH
+  09:03:47.047 [INFO] {Scanner.lua:56} [AUCTION_SCANNER_FSM] EV_CANCEL
+  09:03:47.038 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_BROWSE_DONE -> ST_INIT
+  09:03:47.038 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_BROWSE_CHECKING -> ST_BROWSE_DONE
+  09:03:47.037 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_INIT -> ST_BROWSE_CHECKING
+  09:03:47.037 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] EV_START_BROWSE_NO_SCAN
+  09:03:47.028 [INFO] {Scanner.lua:56} [AUCTION_SCANNER_FSM] EV_CANCEL
+  09:03:47.020 [INFO] {Scanner.lua:64} [AUCTION_SCANNER_FSM] EV_SEARCH_RESULTS_UPDATED
+  09:03:47.020 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] ST_SEARCH_DONE -> ST_INIT
+  09:03:47.020 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] ST_SEARCH_CHECKING -> ST_SEARCH_DONE
+  09:03:47.018 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] ST_SEARCH_REQUEST_MORE -> ST_SEARCH_CHECKING
+  09:03:47.018 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] ST_SEARCH_SEND -> ST_SEARCH_REQUEST_MORE
+  09:03:47.018 [INFO] {Scanner.lua:442} [AUCTION_SCANNER_FSM] EV_FUTURE_SUCCESS
+  09:03:47.018 [INFO] {Analytics.lua:93} AC AH_API_TIME US-BCC-Gilneas SendSellSearchQuery 597
+  09:03:47.017 [INFO] {AuctionHouseWrapper.lua:993} ITEM_SEARCH_RESULTS_UPDATED ({itemID=42421})
+  09:03:47.017 [INFO] {AuctionHouseWrapper.lua:983} AUCTION_HOUSE_THROTTLED_MESSAGE_RESPONSE_RECEIVED ()
+  09:03:47.017 [INFO] {AuctionHouseWrapper.lua:988} AUCTION_HOUSE_NEW_RESULTS_RECEIVED ({itemID=42421})
+  09:03:46.737 [INFO] {AuctionHouseWrapper.lua:988} AUCTION_HOUSE_THROTTLED_MESSAGE_SENT ()
+  09:03:46.446 [INFO] {AuctionHouseWrapper.lua:677|GROUP_SEARCH} SendSellSearchQuery({itemID=42421},{},true)
+  09:03:46.446 [INFO] {AuctionHouseWrapper.lua:988|GROUP_SEARCH} AUCTION_HOUSE_THROTTLED_MESSAGE_QUEUED ()
+  09:03:46.446 [INFO] {Scanner.lua:423|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_SEARCH_GET_KEY -> ST_SEARCH_SEND
+  09:03:46.446 [INFO] {Scanner.lua:423|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_INIT -> ST_SEARCH_GET_KEY
+  09:03:46.446 [INFO] {Scanner.lua:423|GROUP_SEARCH} [AUCTION_SCANNER_FSM] EV_START_SEARCH
+  09:03:46.410 [INFO] {Scanner.lua:56} [AUCTION_SCANNER_FSM] EV_CANCEL
+  09:03:46.377 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_BROWSE_DONE -> ST_INIT
+  09:03:46.377 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_BROWSE_CHECKING -> ST_BROWSE_DONE
+  09:03:46.375 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] ST_INIT -> ST_BROWSE_CHECKING
+  09:03:46.375 [INFO] {Scanner.lua:409|GROUP_SEARCH} [AUCTION_SCANNER_FSM] EV_START_BROWSE_NO_SCAN
+  09:03:46.305 [INFO] {UIManager:AUCTION_BUY_Browse|GROUP_SEARCH} Handling action ACTION_SCAN_NUM_ITEMS_CHANGED ()
+  09:03:46.253 [INFO] {UIManager:AUCTION_BUY_Browse} Handling action ACTION_BOTTOM_FRAME_SHOWN (Frame:scan.bottom,0.034000001847744)
+  09:03:46.252 [INFO] {UIManager:AUCTION_BUY_Browse} Handling action ACTION_SET_SCROLL_TABLE (AuctionScrollTable:scan.auctions)
+  09:03:46.161 [WARN] {ScriptWrapper.lua:95} Script handler (OnClick) for frame (ActionButton:bottom.cancelBtn) took 0.08811s
+  09:03:46.161 [INFO] {ThreadingConfig.lua:50} Starting the scheduler
+  09:03:46.160 [INFO] {UIManager:AUCTION_BUY_Browse} Handling action ACTION_SET_SELECTED_AUCTION (nil)
+  09:03:46.160 [INFO] {UIManager:AUCTION_BUY_Browse} Handling action ACTION_RESET_STATE ()
+  09:03:46.160 [INFO] {UIManager:AUCTION_BUY_Browse} Handling action ACTION_START_SEARCH (GroupSearchContext:000002AB86EDA480)
+  09:03:46.103 [INFO] {Analytics.lua:93} AC UI_NAVIGATION auction/shopping/selection auction/shopping/scan
+  09:03:46.085 [INFO] {Lock.lua:41} Starting scan (Browse)
+  09:03:46.074 [INFO] {UIManager:SHOPPING} Handling action ACTION_START_SEARCH (GroupSearchContext:000002AB86EDA480)
+  09:03:46.073 [INFO] {UIManager:SHOPPING} Handling action ACTION_START_GROUP_SEARCH ()
+  09:03:43.728 [INFO] {Scanner.lua:305} Scanned auctions (left=0)
+  09:03:43.712 [INFO] {Analytics.lua:93} AC AH_API_TIME US-BCC-Gilneas QueryOwnedAuctions 117
+  09:03:43.712 [INFO] {AuctionHouseWrapper.lua:993} OWNED_AUCTIONS_UPDATED ()
+  09:03:43.711 [INFO] {AuctionHouseWrapper.lua:983} AUCTION_HOUSE_THROTTLED_MESSAGE_RESPONSE_RECEIVED ()
+  09:03:43.608 [INFO] {AuctionHouseWrapper.lua:677} QueryOwnedAuctions({sorts={Name,Price}})
+  09:03:43.608 [INFO] {AuctionHouseWrapper.lua:988} AUCTION_HOUSE_THROTTLED_MESSAGE_SENT ()
+  09:03:43.419 [INFO] {Analytics.lua:93} AC UI_NAVIGATION auction/shopping auction/shopping/selection
+  09:03:43.419 [INFO] {Analytics.lua:93} AC UI_NAVIGATION auction auction/shopping
+  09:03:43.399 [INFO] {Analytics.lua:93} AC UI_NAVIGATION  auction
+  09:03:41.941 [INFO] {ThreadingConfig.lua:53} Stopped the scheduler
+  09:03:41.941 [INFO] {Thread.lua:446|PLAYER_PROFESSIONS} Thread finished: PLAYER_PROFESSIONS [2.0%]
+  09:03:41.575 [ERR] {AuctionHouseWrapper.lua:671} API timed out: QueryBids({sorts={Name,Price}},{})
+Addons:
+  Auctionator (275)
+  Details (#Details.20250425.13551.164)
+  Details_Compare2 ()
+  Details_EncounterDetails ()
+  Details_RaidCheck ()
+  Details_Streamer ()
+  Details_TinyThreat ()
+  Details_Vanguard ()
+  ElvUI_Libraries (@project-version@)
+  ElvUI (@project-version@)
+  FasterLooting (1.1.4)
+  Pawn (2.10.13)
+  Questie (10.21.0)
+  SunnArt (3.59)
+  TSM (v4.14.17)
+  WeakAuras (5.19.9)
+  WIM (3.12.11)

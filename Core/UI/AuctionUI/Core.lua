@@ -31,6 +31,10 @@ local private = {
 local MIN_FRAME_SIZE = { width = 750, height = 450 }
 local AH_TAB_ID = "TSM_AH_TAB"
 
+local function HasModernAuctionHouse()
+	return ClientInfo.HasFeature(ClientInfo.FEATURES.C_AUCTION_HOUSE)
+end
+
 
 
 -- ============================================================================
@@ -51,7 +55,7 @@ function AuctionUI.OnInitialize(settingsDB)
 	DefaultUI.RegisterAuctionHouseVisibleCallback(private.AuctionFrameHidden, false)
 	AuctionScan.ConfigureLock(L["A scan is already in progress. Please stop that scan before starting another one."], private.ScanLockCallback)
 	ItemLinked.RegisterCallback(private.ItemLinkedCallback, true)
-	local loadTimer = DelayTimer.New("AUCTION_UI_LOAD_BLIZZ", function() C_AddOns.LoadAddOn(ClientInfo.IsRetail() and "Blizzard_AuctionHouseUI" or "Blizzard_AuctionUI") end)
+	local loadTimer = DelayTimer.New("AUCTION_UI_LOAD_BLIZZ", function() C_AddOns.LoadAddOn(HasModernAuctionHouse() and "Blizzard_AuctionHouseUI" or "Blizzard_AuctionUI") end)
 	loadTimer:RunForTime(1)
 end
 
@@ -105,7 +109,7 @@ function private.AuctionFrameInit()
 		return
 	end
 	local tabTemplateName = nil
-	if ClientInfo.IsRetail() then
+	if HasModernAuctionHouse() then
 		private.defaultFrame = AuctionHouseFrame
 		tabTemplateName = "AuctionHouseFrameTabTemplate"
 	else
@@ -114,7 +118,7 @@ function private.AuctionFrameInit()
 	end
 	if not private.hasShown then
 		private.hasShown = true
-		if ClientInfo.IsRetail() then
+		if HasModernAuctionHouse() then
 			LibAHTab:CreateTab(AH_TAB_ID, CreateFrame("Frame"), Theme.GetColor("INDICATOR_ALT"):ColorText("TSM"))
 			ScriptWrapper.Set(LibAHTab:GetButton(AH_TAB_ID), "OnClick", private.TSMTabOnClick)
 			AuctionHouseFrame:HookScript("OnShow", private.UnregisterDefaultUIEvents)
@@ -136,11 +140,11 @@ function private.AuctionFrameInit()
 		end
 	end
 	if private.settings.showDefault then
-		if not ClientInfo.IsRetail() then
+		if not HasModernAuctionHouse() then
 			UIParent_OnEvent(UIParent, "AUCTION_HOUSE_SHOW")
 		end
 	else
-		if ClientInfo.IsRetail() then
+		if HasModernAuctionHouse() then
 			private.defaultFrame:SetScale(0.001)
 			LibAHTab:SetSelected(AH_TAB_ID)
 		end
@@ -172,7 +176,7 @@ function private.AuctionFrameHidden()
 	if not private.frame then
 		return
 	end
-	if ClientInfo.IsRetail() then
+	if HasModernAuctionHouse() then
 		private.defaultFrame:SetScale(1)
 		private.defaultFrame:SetDisplayMode(AuctionHouseFrameDisplayMode.Buy)
 	end
@@ -185,7 +189,7 @@ function private.HideAuctionFrame()
 	end
 	private.frame:Hide()
 	-- For some reason, on retail the OnHide callback isn't called immediately
-	if not ClientInfo.IsRetail() then
+	if not HasModernAuctionHouse() then
 		assert(not private.frame)
 	end
 	for _, callback in ipairs(private.updateCallbacks) do
@@ -200,11 +204,13 @@ function private.CreateMainFrame()
 		:SetSettingsContext(private.settings, "frame")
 		:SetMinResize(MIN_FRAME_SIZE.width, MIN_FRAME_SIZE.height)
 		:SetStrata("HIGH")
-		:SetProtected(not ClientInfo.IsRetail() and private.settings.protectAuctionHouse)
+		:SetProtected(not HasModernAuctionHouse() and private.settings.protectAuctionHouse)
 		:AddPlayerGold(private.settings)
-		:AddAppStatusIcon(AppHelper.GetRegion(), AppHelper.GetLastSync(), TSM.AuctionDB.GetAppDataUpdateTimes())
 		:AddSwitchButton(private.SwitchBtnOnClick)
 		:SetScript("OnHide", private.BaseFrameOnHide)
+	if AppHelper.IsDesktopAppSupported() then
+		frame:AddAppStatusIcon(AppHelper.GetRegion(), AppHelper.GetLastSync(), TSM.AuctionDB.GetAppDataUpdateTimes())
+	end
 	for _, info in ipairs(private.topLevelPages) do
 		frame:AddNavButton(info.name, info.callback)
 	end
@@ -237,7 +243,7 @@ function private.BaseFrameOnHide(frame)
 	private.frame = nil
 	if not private.isSwitching then
 		PlaySound(SOUNDKIT.AUCTION_WINDOW_CLOSE)
-		if ClientInfo.IsRetail() then
+		if HasModernAuctionHouse() then
 			private.defaultFrame:SetScale(1)
 			C_AuctionHouse.CloseAuctionHouse()
 		else
@@ -251,7 +257,7 @@ function private.SwitchBtnOnClick(button)
 	private.isSwitching = true
 	private.settings.showDefault = true
 	private.HideAuctionFrame()
-	if ClientInfo.IsRetail() then
+	if HasModernAuctionHouse() then
 		private.defaultFrame:SetScale(1)
 		private.defaultFrame:SetDisplayMode(AuctionHouseFrameDisplayMode.Buy)
 	end
@@ -261,12 +267,12 @@ end
 
 function private.TSMTabOnClick()
 	private.settings.showDefault = false
-	if not ClientInfo.IsRetail() then
+	if not HasModernAuctionHouse() then
 		ClearCursor()
 		ClickAuctionSellItemButton(AuctionsItemButton, "LeftButton")
 	end
 	ClearCursor()
-	if ClientInfo.IsRetail() then
+	if HasModernAuctionHouse() then
 		private.defaultFrame:SetScale(0.001)
 		LibAHTab:SetSelected(AH_TAB_ID)
 	else

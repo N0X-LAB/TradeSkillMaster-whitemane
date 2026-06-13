@@ -580,7 +580,7 @@ end
 ---@param useEmptySorts boolean Use an empty sorts list
 ---@return boolean
 function AuctionHouseWrapper.SetSort(useEmptySorts)
-	if ClientInfo.IsRetail() then
+	if ClientInfo.HasFeature(ClientInfo.FEATURES.C_AUCTION_HOUSE) then
 		return true
 	end
 

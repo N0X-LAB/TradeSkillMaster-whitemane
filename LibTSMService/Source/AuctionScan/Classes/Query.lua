@@ -274,7 +274,7 @@ function AuctionQuery:SetPage(page)
 	if page == nil then
 		self._specifiedPage = nil
 	elseif type(page) == "number" or page == "FIRST" or page == "LAST" then
-		assert(not LibTSMService.IsRetail())
+		assert(not LibTSMService.IsModernAuctionHouse())
 		self._specifiedPage = page
 	else
 		error("Invalid page: "..tostring(page))
@@ -302,7 +302,7 @@ end
 ---@return Future
 function AuctionQuery:Browse()
 	local noScan = false
-	if LibTSMService.IsRetail() then
+	if LibTSMService.IsModernAuctionHouse() then
 		local numItems = 0
 		for _, itemType in pairs(self._items) do
 			if itemType == ITEM_SPECIFIC then
@@ -316,7 +316,7 @@ function AuctionQuery:Browse()
 	end
 
 	if noScan then
-		assert(LibTSMService.IsRetail())
+		assert(LibTSMService.IsModernAuctionHouse())
 		local itemKeys = TempTable.Acquire()
 		for itemString in pairs(self._items) do
 			if itemString == ItemString.GetBaseFast(itemString) then
@@ -343,7 +343,7 @@ end
 ---Gets the search progress.
 ---@return number
 function AuctionQuery:GetSearchProgress()
-	if not LibTSMService.IsRetail() then
+	if not LibTSMService.IsModernAuctionHouse() then
 		return 1
 	end
 	local progress, totalNum = 0, 0
@@ -383,7 +383,7 @@ end
 ---@param itemString string The item string
 ---@return AuctionSubRow?
 function AuctionQuery:GetCheapestSubRow(itemString)
-	assert(LibTSMService.IsRetail())
+	assert(LibTSMService.IsModernAuctionHouse())
 	local cheapest, cheapestItemBuyout = nil, nil
 	for _, subRow in self:ItemSubRowIterator(itemString) do
 		local quantity = subRow:GetQuantities()
@@ -420,7 +420,7 @@ end
 ---@param useCachedData boolean Use cached data for the search
 ---@return Future
 function AuctionQuery:Search(row, useCachedData)
-	assert(LibTSMService.IsRetail())
+	assert(LibTSMService.IsModernAuctionHouse())
 	assert(self._browseResults)
 	return Scanner.Search(self, self._resolveSellers, useCachedData, row, self._callback)
 end
@@ -546,7 +546,7 @@ function AuctionQuery:_IsFiltered(row, isSubRow, itemKey)
 end
 
 function AuctionQuery:_BrowseIsDone(isRetry)
-	if LibTSMService.IsRetail() then
+	if LibTSMService.IsModernAuctionHouse() then
 		if self._isBrowseDoneFunc and self:_isBrowseDoneFunc() then
 			return true
 		end
@@ -569,7 +569,7 @@ function AuctionQuery:_BrowseIsDone(isRetry)
 end
 
 function AuctionQuery:_BrowseIsPageValid()
-	if LibTSMService.IsRetail() then
+	if LibTSMService.IsModernAuctionHouse() then
 		return true
 	end
 	if self._specifiedPage then
@@ -580,7 +580,7 @@ function AuctionQuery:_BrowseIsPageValid()
 end
 
 function AuctionQuery:_BrowseRequestMore(isRetry)
-	if LibTSMService.IsRetail() then
+	if LibTSMService.IsModernAuctionHouse() then
 		return AuctionHouseWrapper.RequestMoreBrowseResults()
 	else
 		if self._specifiedPage then
@@ -626,7 +626,7 @@ function AuctionQuery:_FilterBrowseResults()
 	local numRemoved = 0
 	for baseItemString, row in pairs(self._browseResults) do
 		-- Filter the itemKeys we don't care about and rows which don't match the query
-		if row:IsFiltered(self) or (not LibTSMService.IsRetail() and row:FilterSubRows(self)) then
+		if row:IsFiltered(self) or (not LibTSMService.IsModernAuctionHouse() and row:FilterSubRows(self)) then
 			self._browseResults[baseItemString]:Release()
 			self._browseResults[baseItemString] = nil
 			numRemoved = numRemoved + 1

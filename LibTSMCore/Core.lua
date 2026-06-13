@@ -122,6 +122,12 @@ function LibTSMComponent.__static.IsRetail()
 	return GAME_VERSION == "RETAIL"
 end
 
+---Returns whether or not the client uses the modern auction house API.
+---@return boolean
+function LibTSMComponent.__static.IsModernAuctionHouse()
+	return C_AuctionHouse ~= nil
+end
+
 ---Gets the current time value (or 0 if no function is registered).
 ---@return number
 function LibTSMComponent.__static.GetTime()

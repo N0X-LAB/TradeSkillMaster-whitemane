@@ -46,22 +46,23 @@ local private = {
 -- ============================================================================
 
 ClientInfo:OnModuleLoad(function()
+	local hasModernAuctionHouse = C_AuctionHouse ~= nil
 	private.features = {
 		[ClientInfo.FEATURES.REAGENT_BAG] = LibTSMWoW.IsRetail(),
 		[ClientInfo.FEATURES.CONNECTED_FACTION_AH] = LibTSMWoW.IsRetail(),
 		[ClientInfo.FEATURES.HONOR_POINTS] = LibTSMWoW.IsCataClassic(),
 		[ClientInfo.FEATURES.SUB_PROFESSION_NAMES] = not LibTSMWoW.IsRetail(),
 		[ClientInfo.FEATURES.AH_COPPER] = not LibTSMWoW.IsRetail(),
-		[ClientInfo.FEATURES.AH_STACKS] = not LibTSMWoW.IsRetail(),
+		[ClientInfo.FEATURES.AH_STACKS] = not hasModernAuctionHouse,
 		[ClientInfo.FEATURES.AH_UNCOLLECTED_FILTER] = LibTSMWoW.IsRetail(),
 		[ClientInfo.FEATURES.AH_UPGRADES_FILTER] = LibTSMWoW.IsRetail(),
-		[ClientInfo.FEATURES.AH_LIFO] = LibTSMWoW.IsRetail(),
-		[ClientInfo.FEATURES.AH_SELLERS] = not LibTSMWoW.IsRetail(),
+		[ClientInfo.FEATURES.AH_LIFO] = hasModernAuctionHouse,
+		[ClientInfo.FEATURES.AH_SELLERS] = not hasModernAuctionHouse,
 		[ClientInfo.FEATURES.BATTLE_PETS] = LibTSMWoW.IsRetail(),
 		[ClientInfo.FEATURES.GARRISON] = LibTSMWoW.IsRetail(),
 		[ClientInfo.FEATURES.GUILD_BANK] = not LibTSMWoW.IsVanillaClassic(),
-		[ClientInfo.FEATURES.C_AUCTION_HOUSE] = LibTSMWoW.IsRetail(),
-		[ClientInfo.FEATURES.COMMODITY_ITEMS] = LibTSMWoW.IsRetail(),
+		[ClientInfo.FEATURES.C_AUCTION_HOUSE] = hasModernAuctionHouse,
+		[ClientInfo.FEATURES.COMMODITY_ITEMS] = hasModernAuctionHouse,
 		[ClientInfo.FEATURES.CRAFTING_QUALITY] = LibTSMWoW.IsRetail(),
 		[ClientInfo.FEATURES.C_TRADE_SKILL_UI] = LibTSMWoW.IsRetail(),
 		[ClientInfo.FEATURES.C_TOOLTIP_INFO] = LibTSMWoW.IsRetail(),
@@ -86,6 +87,12 @@ end)
 ---@return boolean
 function ClientInfo.IsRetail()
 	return LibTSMWoW.IsRetail()
+end
+
+---Returns whether or not the client uses the modern auction house API.
+---@return boolean
+function ClientInfo.IsModernAuctionHouse()
+	return ClientInfo.HasFeature(ClientInfo.FEATURES.C_AUCTION_HOUSE)
 end
 
 ---Returns whether or not we're running within the Vanilla Classic version of the game.

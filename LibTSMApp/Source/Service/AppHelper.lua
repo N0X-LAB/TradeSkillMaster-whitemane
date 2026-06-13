@@ -27,6 +27,7 @@ local private = {
 	-- The addon has historically had the game version as a suffix, whereas the app data has it as a prefix, so we store both
 	addonRegion = nil,
 	appDataRegion = nil,
+	desktopAppSupported = true,
 	appInfo = nil,
 	auctionDBData = {
 		realm = {},
@@ -146,6 +147,7 @@ AppHelper:OnModuleLoad(function()
 		else
 			local currentRealmName = private.SanitizedRealmName(SessionInfo.GetRealmName())
 			local realmInfo = RealmData.Classic[currentRealmName]
+			private.desktopAppSupported = realmInfo ~= nil
 			region = realmInfo and realmInfo.region
 		end
 		region = region or (cVar ~= "public-test" and cVar) or "PTR"
@@ -203,6 +205,12 @@ end
 ---@return string
 function AppHelper.GetRegion()
 	return private.addonRegion
+end
+
+---Returns whether the desktop app provides data for the current realm.
+---@return boolean
+function AppHelper.IsDesktopAppSupported()
+	return private.desktopAppSupported
 end
 
 ---Gets the AuctionDB data.

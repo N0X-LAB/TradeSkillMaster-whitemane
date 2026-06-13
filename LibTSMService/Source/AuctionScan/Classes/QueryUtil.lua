@@ -56,7 +56,7 @@ function QueryUtil.GenerateThreaded(itemList, callback)
 	end
 
 	-- Add all the items
-	if LibTSMService.IsRetail() then
+	if LibTSMService.IsModernAuctionHouse() then
 		-- Sort the item list so all base items are grouped together but keep relative ordering between base items the same
 		wipe(private.itemListSortValue)
 		for i, itemString in ipairs(itemList) do

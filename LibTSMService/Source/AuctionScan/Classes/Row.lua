@@ -52,7 +52,7 @@ function AuctionRow:__init()
 	self._canHaveNonBaseItemString = nil
 	self._minPrice = nil
 	self._hasItemInfo = false
-	self._isCommodity = LibTSMService.IsRetail() and FIELD_NOT_SET or false
+	self._isCommodity = LibTSMService.IsModernAuctionHouse() and FIELD_NOT_SET or false
 	self._notFiltered = false
 	self._searchIndex = nil
 	self._subRows = {} ---@type AuctionSubRow[]
@@ -61,7 +61,7 @@ end
 
 function AuctionRow:_Acquire(query, item, minPrice, totalQuantity)
 	self._query = query
-	if LibTSMService.IsRetail() then
+	if LibTSMService.IsModernAuctionHouse() then
 		item._minPrice = minPrice
 		item._totalQuantity = totalQuantity
 		tinsert(self._items, item)
@@ -103,7 +103,7 @@ function AuctionRow:Merge(item, minPrice, totalQuantity)
 		end
 	end
 	self._hasItemInfo = false
-	if LibTSMService.IsRetail() then
+	if LibTSMService.IsModernAuctionHouse() then
 		assert(self._baseItemString == ItemString.GetBaseFromItemKey(item))
 		item._minPrice = minPrice
 		item._totalQuantity = totalQuantity
@@ -123,7 +123,7 @@ function AuctionRow:Release()
 	self._canHaveNonBaseItemString = nil
 	self._minPrice = nil
 	self._hasItemInfo = false
-	self._isCommodity = LibTSMService.IsRetail() and FIELD_NOT_SET or false
+	self._isCommodity = LibTSMService.IsModernAuctionHouse() and FIELD_NOT_SET or false
 	self._notFiltered = false
 	self._searchIndex = nil
 	self._minBrowseId = nil
@@ -163,7 +163,7 @@ function AuctionRow:PopulateBrowseData(missingItemIds)
 	local missingInfo = false
 	ItemInfo.SetQueryUpdatesPaused(true)
 	for _, item in ipairs(self._items) do
-		if LibTSMService.IsRetail() and not item._hasInfo then
+		if LibTSMService.IsModernAuctionHouse() and not item._hasInfo then
 			if item.itemSuffix ~= 0 or item.battlePetSpeciesID ~= 0 then
 				local itemKeyInfo = AuctionHouse.GetItemKeyInfo(item)
 				if itemKeyInfo then
@@ -235,7 +235,7 @@ end
 
 ---Resets the index of the item being searched for.
 function AuctionRow:SearchReset()
-	assert(LibTSMService.IsRetail())
+	assert(LibTSMService.IsModernAuctionHouse())
 	assert(#self._items > 0)
 	self._searchIndex = 1
 end
@@ -243,7 +243,7 @@ end
 ---Advances the index of the item being searched for and returns if we're done with the entire row.
 ---@return boolean
 function AuctionRow:SearchNext()
-	assert(LibTSMService.IsRetail())
+	assert(LibTSMService.IsModernAuctionHouse())
 	assert(self._searchIndex)
 	if self._searchIndex == #self._items then
 		self._searchIndex = nil
@@ -264,7 +264,7 @@ end
 ---Sends the active item search for this row.
 ---@return Future?
 function AuctionRow:SearchSend()
-	assert(LibTSMService.IsRetail())
+	assert(LibTSMService.IsModernAuctionHouse())
 	assert(self._searchIndex)
 	local itemKey = self._items[self._searchIndex]
 	-- Send a sell query if we don't have browse results for the itemKey
@@ -306,7 +306,7 @@ end
 ---@param index? number The item index
 ---@param itemLink? string The item link
 function AuctionRow:PopulateSubRows(browseId, index, itemLink)
-	if LibTSMService.IsRetail() then
+	if LibTSMService.IsModernAuctionHouse() then
 		assert(self._searchIndex and not index)
 		local subRowOffset = self._searchIndex * SUB_ROW_SEARCH_INDEX_MULTIPLIER
 		local itemKey = self._items[self._searchIndex]
@@ -359,8 +359,8 @@ end
 ---@param query AuctionQuery
 ---@return boolean
 function AuctionRow:FilterSubRows(query)
-	local subRowOffset = LibTSMService.IsRetail() and (self._searchIndex * SUB_ROW_SEARCH_INDEX_MULTIPLIER) or 0
-	if LibTSMService.IsRetail() then
+	local subRowOffset = LibTSMService.IsModernAuctionHouse() and (self._searchIndex * SUB_ROW_SEARCH_INDEX_MULTIPLIER) or 0
+	if LibTSMService.IsModernAuctionHouse() then
 		local itemKey = self._items[self._searchIndex]
 		for j = itemKey._numAuctions, 1, -1 do
 			local subRow = self._subRows[subRowOffset + j]
@@ -381,7 +381,7 @@ function AuctionRow:FilterSubRows(query)
 	local hashIndexLookup = TempTable.Acquire()
 	local index = 1
 	while true do
-		numSubRows = LibTSMService.IsRetail() and self._items[self._searchIndex]._numAuctions or #self._subRows
+		numSubRows = LibTSMService.IsModernAuctionHouse() and self._items[self._searchIndex]._numAuctions or #self._subRows
 		if index > numSubRows then
 			break
 		end
@@ -405,7 +405,7 @@ end
 ---Gets the number of sub rows.
 ---@return number
 function AuctionRow:GetNumSubRows()
-	if LibTSMService.IsRetail() then
+	if LibTSMService.IsModernAuctionHouse() then
 		local result = 0
 		for _, itemKey in ipairs(self._items) do
 			result = result + (itemKey._numAuctions or 0)
@@ -420,7 +420,7 @@ end
 ---@param searchOnly? boolean Only include sub rows for the current item search index
 ---@return fun(): number, AuctionSubRow @Iterator with fields: `index`, `subRow`
 function AuctionRow:SubRowIterator(searchOnly)
-	if LibTSMService.IsRetail() then
+	if LibTSMService.IsModernAuctionHouse() then
 		if searchOnly then
 			local result = TempTable.Acquire()
 			assert(self._searchIndex)
@@ -442,7 +442,7 @@ end
 ---@param index number The index of the sub row to get
 ---@return AuctionSubRow
 function AuctionRow:GetCommoditySubRow(index)
-	assert(LibTSMService.IsRetail() and #self._items == 1)
+	assert(LibTSMService.IsModernAuctionHouse() and #self._items == 1)
 	return self._subRows[SUB_ROW_SEARCH_INDEX_MULTIPLIER + index]
 end
 
@@ -468,7 +468,7 @@ end
 ---Gets the item string.
 ---@return string?
 function AuctionRow:GetItemString()
-	if not LibTSMService.IsRetail() or not self._hasItemInfo or self._canHaveNonBaseItemString then
+	if not LibTSMService.IsModernAuctionHouse() or not self._hasItemInfo or self._canHaveNonBaseItemString then
 		return nil
 	end
 	if self._canHaveNonBaseItemString == nil then
@@ -490,7 +490,7 @@ end
 ---@return number? quality
 ---@return number? itemLevel
 function AuctionRow:GetItemInfo(itemKey)
-	if not LibTSMService.IsRetail() or not self._hasItemInfo then
+	if not LibTSMService.IsModernAuctionHouse() or not self._hasItemInfo then
 		return nil, nil, nil, nil
 	end
 	itemKey = itemKey or (#self._items == 1 and self._items[1]) or nil
@@ -543,7 +543,7 @@ end
 ---@return nil itemBuyout
 ---@return number? minPrice
 function AuctionRow:GetBuyouts(resultItemKey)
-	if not LibTSMService.IsRetail() then
+	if not LibTSMService.IsModernAuctionHouse() then
 		return nil, nil, nil
 	end
 	assert(#self._items > 0)
@@ -570,7 +570,7 @@ end
 ---@return number numAuctions
 function AuctionRow:GetQuantities()
 	local totalQuantity = 0
-	if LibTSMService.IsRetail() then
+	if LibTSMService.IsModernAuctionHouse() then
 		for _, itemKey in ipairs(self._items) do
 			if not itemKey._totalQuantity then
 				return
@@ -603,7 +603,7 @@ end
 ---@param subRow AuctionSubRow
 function AuctionRow:RemoveSubRow(subRow)
 	local index = Table.KeyByValue(self._subRows, subRow)
-	if LibTSMService.IsRetail() then
+	if LibTSMService.IsModernAuctionHouse() then
 		local searchIndex = floor(index / SUB_ROW_SEARCH_INDEX_MULTIPLIER)
 		index = index % SUB_ROW_SEARCH_INDEX_MULTIPLIER
 		assert(self._subRows[searchIndex * SUB_ROW_SEARCH_INDEX_MULTIPLIER + index] == subRow)
@@ -620,7 +620,7 @@ end
 ---Wipes the sub rows.
 function AuctionRow:WipeSearchResults()
 	wipe(self._subRows)
-	if LibTSMService.IsRetail() then
+	if LibTSMService.IsModernAuctionHouse() then
 		for _, itemKey in ipairs(self._items) do
 			itemKey._numAuctions = nil
 		end
@@ -636,7 +636,7 @@ end
 ---Decrements the quantity of the row's item.
 ---@param amount number The amount to decrement by
 function AuctionRow:DecrementQuantity(amount)
-	assert(self:IsCommodity() and LibTSMService.IsRetail() and #self._items == 1)
+	assert(self:IsCommodity() and LibTSMService.IsModernAuctionHouse() and #self._items == 1)
 	local index = 1
 	while amount > 0 do
 		local subRow = self._subRows[index + SUB_ROW_SEARCH_INDEX_MULTIPLIER]
@@ -674,7 +674,7 @@ end
 -- ============================================================================
 
 function AuctionRow.__private:_RemoveSubRowByIndex(index)
-	if LibTSMService.IsRetail() then
+	if LibTSMService.IsModernAuctionHouse() then
 		local subRowOffset = self._searchIndex * SUB_ROW_SEARCH_INDEX_MULTIPLIER
 		local itemKey = self._items[self._searchIndex]
 		self._subRows[subRowOffset + index]:Release()
@@ -693,7 +693,7 @@ end
 
 ---@private
 function AuctionRow:_GetSearchProgress()
-	assert(LibTSMService.IsRetail())
+	assert(LibTSMService.IsModernAuctionHouse())
 	if #self._items == 0 then
 		return 0
 	end

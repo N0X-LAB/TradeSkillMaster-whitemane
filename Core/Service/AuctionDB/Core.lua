@@ -55,7 +55,7 @@ function AuctionDB.OnEnable()
 		end
 	end
 
-	if private.realmUpdateTime == 0 then
+	if private.realmUpdateTime == 0 and AppHelper.IsDesktopAppSupported() then
 		ChatMessage.PrintfUser(L["TSM doesn't currently have any AuctionDB pricing data for your realm. We recommend you download the TSM Desktop Application from %s to automatically update your AuctionDB data (and auto-backup your TSM settings)."], ChatMessage.ColorUserAccentText("https://tradeskillmaster.com"))
 	end
 
