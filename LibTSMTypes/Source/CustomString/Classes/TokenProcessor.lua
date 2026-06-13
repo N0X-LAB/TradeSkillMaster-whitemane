@@ -364,7 +364,13 @@ function TokenProcessor.__private:_ProcessExpression(parent)
 		tinsert(result, child)
 	end
 	if #result == 1 then
-		-- Expression with a single child, so nothing to process
+		-- Expression with a single non-operator child, so nothing to process
+		local child = result[1]
+		if self._tree:GetData(child, "type") == INTERNAL_AST_NODE.OPERATOR then
+			self:_HandleErrorForNode(Types.ERROR.INVALID_TOKEN, child)
+			wipe(result)
+			return false
+		end
 		wipe(result)
 		return true
 	elseif #result == 0 then
