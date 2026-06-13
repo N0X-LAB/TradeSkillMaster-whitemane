@@ -42,7 +42,10 @@ function lib:CreateTab(tabID, attachedFrame, displayText)
     error("The tab id already exists")
   end
 
-  local newTab = CreateFrame("Button", nil, lib.internalState.rootFrame, "AuctionHouseFrameDisplayModeTabTemplate")
+  -- Cataclysm's PanelTemplates_TabResize looks up the tab text through the
+  -- button's global name, so the tab cannot be anonymous on this client.
+  local tabName = "LibAHTabButton" .. (#lib.internalState.Tabs + 1)
+  local newTab = CreateFrame("Button", tabName, lib.internalState.rootFrame, "AuctionHouseFrameDisplayModeTabTemplate")
   table.insert(lib.internalState.Tabs, newTab)
 
   newTab:SetText(displayText)
