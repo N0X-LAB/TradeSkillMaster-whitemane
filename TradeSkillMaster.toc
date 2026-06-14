@@ -4,7 +4,7 @@
 ## Notes: Auction house and gold making addon.
 ## Author: TradeSkillMaster Team
 ## Version: v4.14.17
-## SavedVariables: TradeSkillMasterDB, TSMItemInfoDB
+## SavedVariables: TradeSkillMasterDB, TSMItemInfoDB, TSMLocalPriceDB
 ## OptionalDeps: ArkInventory, Auc-Advanced, Auctionator, TheUndermineJournal, BootyBayGazette, AuctionDB, CanIMogIt
 ## X-Embeds: Ace3, LibDataBroker-1.1, LibDBIcon-1.0, LibRealmInfo, LibDeflate, LibSerialize, LibAHTab
 

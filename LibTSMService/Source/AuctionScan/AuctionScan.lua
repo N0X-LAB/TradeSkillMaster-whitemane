@@ -9,6 +9,9 @@ local AuctionScan = LibTSMService:Init("AuctionScan")
 local AuctionScanManager = LibTSMService:IncludeClassType("AuctionScanManager")
 local FindThread = LibTSMService:Include("AuctionScan.FindThread")
 local Lock = LibTSMService:Include("AuctionScan.Lock")
+local private = {
+	queryDoneCallbacks = {},
+}
 
 
 
@@ -19,7 +22,17 @@ local Lock = LibTSMService:Include("AuctionScan.Lock")
 ---Gets an auction scan manager.
 ---@return AuctionScanManager
 function AuctionScan.GetManager()
-	return AuctionScanManager.Get()
+	local manager = AuctionScanManager.Get()
+	for callback in pairs(private.queryDoneCallbacks) do
+		manager:AddQueryDoneCallback(callback)
+	end
+	return manager
+end
+
+---Registers a callback which is called whenever an auction scan query completes.
+---@param callback fun(manager: AuctionScanManager, query: AuctionQuery)
+function AuctionScan.RegisterQueryDoneCallback(callback)
+	private.queryDoneCallbacks[callback] = true
 end
 
 ---Stops any in-progress find thread.

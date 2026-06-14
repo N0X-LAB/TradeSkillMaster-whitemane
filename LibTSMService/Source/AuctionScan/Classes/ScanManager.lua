@@ -54,6 +54,7 @@ function AuctionScanManager:__init()
 	self._queryDidBrowse = false
 	self._onProgressUpdateHandler = nil
 	self._onQueryDoneHandler = nil
+	self._queryDoneCallbacks = {}
 	self._resultsUpdateCallbacks = {}
 	self._nextSearchItemFunction = nil
 	self._currentSearchChangedCallback = nil
@@ -84,6 +85,7 @@ function AuctionScanManager:_Release()
 	self._queryDidBrowse = false
 	self._onProgressUpdateHandler = nil
 	self._onQueryDoneHandler = nil
+	wipe(self._queryDoneCallbacks)
 	wipe(self._resultsUpdateCallbacks)
 	self._nextSearchItemFunction = nil
 	self._currentSearchChangedCallback = nil
@@ -162,6 +164,12 @@ function AuctionScanManager:SetScript(script, handler)
 		error("Unknown AuctionScanManager script: "..tostring(script))
 	end
 	return self
+end
+
+---Adds a callback when a query completes.
+---@param func fun(manager: AuctionScanManager, query: AuctionQuery)
+function AuctionScanManager:AddQueryDoneCallback(func)
+	self._queryDoneCallbacks[func] = true
 end
 
 ---Adds a callback when results are updated.
@@ -247,6 +255,9 @@ function AuctionScanManager:ScanQueriesThreaded()
 		self:_SendActionScript("OnQueryDone")
 		if self._onQueryDoneHandler then
 			self:_onQueryDoneHandler(query, numNewResults)
+		end
+		for callback in pairs(self._queryDoneCallbacks) do
+			callback(self, query)
 		end
 		self:_Pause()
 	end

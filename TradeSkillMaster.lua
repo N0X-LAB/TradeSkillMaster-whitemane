@@ -13,10 +13,13 @@ local AuctioningOperation = TSM.LibTSMSystem:Include("AuctioningOperation")
 local ShoppingOperation = TSM.LibTSMSystem:Include("ShoppingOperation")
 local SniperOperation = TSM.LibTSMSystem:Include("SniperOperation")
 local CustomString = TSM.LibTSMTypes:Include("CustomString")
+local ItemString = TSM.LibTSMTypes:Include("Item.ItemString")
 local ItemInfo = TSM.LibTSMService:Include("Item.ItemInfo")
 local ItemFilter = TSM.LibTSMService:IncludeClassType("ItemFilter")
 local VendorBuy = TSM.LibTSMService:Include("Item.VendorBuy")
 local Sync = TSM.LibTSMService:Include("Sync")
+local AuctionScan = TSM.LibTSMService:Include("AuctionScan")
+local SessionInfo = TSM.LibTSMWoW:Include("Util.SessionInfo")
 local Inventory = TSM.LibTSMApp:Include("Service.Inventory")
 local L = TSM.Locale.GetTable()
 local CustomStringFormat = TSM.LibTSMUI:Include("Util.CustomStringFormat")
@@ -24,7 +27,13 @@ local private = {
 	settings = nil,
 	itemInfoPublisher = nil,  --luacheck: ignore 1004 - just stored for GC reasons
 	oribosExchangeTemp = {},
+	localPriceData = nil,
+	localPriceScanTemp = {},
 }
+local LOCAL_PRICE_DATA_VERSION = 1
+local MARKET_VALUE_OLD_WEIGHT = 0.8
+local MARKET_VALUE_NEW_WEIGHT = 0.2
+local MARKET_VALUE_MIN_BUYOUT_CAP = 3
 do
 	-- Basic module configuration
 	Log.SetLoggingToChatEnabled(TSM.LibTSMUtil.IsTestVersion())
@@ -46,6 +55,7 @@ function TSM.OnInitialize(settingsDB)
 		:AddKey("global", "debug", "chatLoggingEnabled")
 		:AddKey("sync", "internalData", "classKey")
 		:RegisterCallback("destroyValueSource", function() CustomString.InvalidateCache("Destroy") end)
+	AuctionScan.RegisterQueryDoneCallback(private.AuctionScanQueryDone)
 
 	-- Configure some LibTSM modules
 	local svCopyError = L["It appears that you've manually copied your saved variables between accounts which will cause TSM's automatic sync'ing to not work. You'll need to undo this, and/or delete the TradeSkillMaster saved variables files on both accounts (with WoW closed) in order to fix this."]
@@ -246,7 +256,7 @@ function TSM.OnInitialize(settingsDB)
 			if isRegion then
 				return TSM.AuctionDB.GetRegionItemData(itemString, key)
 			else
-				return TSM.AuctionDB.GetRealmItemData(itemString, key)
+				return TSM.AuctionDB.GetRealmItemData(itemString, key) or private.GetLocalPrice(itemString, key)
 			end
 		end
 	end
@@ -288,4 +298,79 @@ function TSM.OnInitialize(settingsDB)
 
 	-- Force a garbage collection
 	collectgarbage()
+end
+
+function private.GetLocalPriceData()
+	if private.localPriceData then
+		return private.localPriceData
+	end
+	-- luacheck: globals TSMLocalPriceDB
+	TSMLocalPriceDB = type(TSMLocalPriceDB) == "table" and TSMLocalPriceDB or {}
+	TSMLocalPriceDB.version = LOCAL_PRICE_DATA_VERSION
+	TSMLocalPriceDB.realms = TSMLocalPriceDB.realms or {}
+	local realmName = SessionInfo.GetRealmName()
+	TSMLocalPriceDB.realms[realmName] = TSMLocalPriceDB.realms[realmName] or { items = {}, updateTime = 0 }
+	private.localPriceData = TSMLocalPriceDB.realms[realmName]
+	private.localPriceData.items = private.localPriceData.items or {}
+	return private.localPriceData
+end
+
+function private.GetLocalPrice(itemString, key)
+	if not itemString or (key ~= "marketValue" and key ~= "minBuyout") then
+		return nil
+	end
+	local items = private.GetLocalPriceData().items
+	itemString = ItemString.ToLevel(itemString)
+	local data = items[itemString]
+	if not data then
+		data = items[ItemString.GetBaseFast(itemString)]
+	end
+	return data and data[key] or nil
+end
+
+function private.AuctionScanQueryDone(_, query)
+	wipe(private.localPriceScanTemp)
+	for _, row in query:BrowseResultsIterator() do
+		for _, subRow in row:SubRowIterator() do
+			if subRow:HasRawData() then
+				local itemString = ItemString.GetBaseFast(subRow:GetItemString())
+				local _, itemBuyout = subRow:GetBuyouts()
+				local quantity, numAuctions = subRow:GetQuantities()
+				quantity = quantity * numAuctions
+				if itemString and itemBuyout and itemBuyout > 0 and quantity and quantity > 0 then
+					local data = private.localPriceScanTemp[itemString]
+					if not data then
+						data = { minBuyout = itemBuyout, totalValue = 0, totalQuantity = 0 }
+						private.localPriceScanTemp[itemString] = data
+					end
+					data.minBuyout = min(data.minBuyout, itemBuyout)
+					data.totalValue = data.totalValue + itemBuyout * quantity
+					data.totalQuantity = data.totalQuantity + quantity
+				end
+			end
+		end
+	end
+
+	local localPriceData = private.GetLocalPriceData()
+	local updateTime = time()
+	local didUpdate = false
+	for itemString, scanData in pairs(private.localPriceScanTemp) do
+		local scanMarketValue = scanData.totalValue / scanData.totalQuantity
+		scanMarketValue = min(scanMarketValue, scanData.minBuyout * MARKET_VALUE_MIN_BUYOUT_CAP)
+		local data = localPriceData.items[itemString]
+		if not data then
+			data = {}
+			localPriceData.items[itemString] = data
+		end
+		data.minBuyout = scanData.minBuyout
+		data.marketValue = floor((data.marketValue and (data.marketValue * MARKET_VALUE_OLD_WEIGHT + scanMarketValue * MARKET_VALUE_NEW_WEIGHT) or scanMarketValue) + 0.5)
+		data.updateTime = updateTime
+		didUpdate = true
+	end
+	if not didUpdate then
+		return
+	end
+	localPriceData.updateTime = updateTime
+	CustomString.InvalidateCache("DBMarket")
+	CustomString.InvalidateCache("DBMinBuyout")
 end
