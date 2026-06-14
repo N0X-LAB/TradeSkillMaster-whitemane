@@ -71,7 +71,7 @@ local STATE_SCHEMA = Reactive.CreateStateSchema("AUCTION_BUY_SCAN_STATE")
 	:AddBooleanField("canCancel", false)
 	:AddBooleanField("cancelShown", false)
 	:AddBooleanField("postDialogShown", false)
-	:AddNumberField("postDuration", 2)
+	:AddNumberField("postDuration", 1)
 	:Commit()
 
 
@@ -733,21 +733,21 @@ function AuctionBuyScan.__private:_ActionHandler(manager, state, action, ...)
 		end
 	elseif action == "ACTION_POST_AUCTION" then
 		local postContext = self:_GetPostContext()
-		local itemString, itemDisplayedBid, itemBuyout, quantity, ownerStr = postContext:GetInfo()
+		local itemString, itemDisplayedBid, itemBuyout, quantity = postContext:GetInfo()
 		if not itemString then
 			-- Should never get here
 			return
 		end
 
-		local undercut = (LibTSMUI.IsModernAuctionHouse() or self._isPlayerFunc(ownerStr, true)) and 0 or 1
+		local undercut = LibTSMUI.IsRetail() and 0 or 1
 		local bid = itemDisplayedBid - undercut
 		local buyout = itemBuyout - undercut
-		if LibTSMUI.IsModernAuctionHouse() then
+		if LibTSMUI.IsRetail() then
 			bid = Math.Round(bid, COPPER_PER_SILVER)
 			buyout = Math.Round(buyout, COPPER_PER_SILVER)
 		end
 		bid = Math.Bound(bid, 1, MAXIMUM_BID_PRICE)
-		buyout = Math.Bound(buyout, 0, MAXIMUM_BID_PRICE)
+		buyout = Math.Bound(buyout, 1, MAXIMUM_BID_PRICE)
 
 		state.auctionScrollTable:GetBaseElement():ShowDialogFrame(UIElements.New("ShoppingPostDialog", "dialog")
 			:SetSize(326, LibTSMUI.IsModernAuctionHouse() and 344 or 380)

@@ -530,8 +530,10 @@ function AuctionHouseWrapper.PostAuction(bag, slot, duration, stackSize, numAuct
 		return nil
 	end
 	if ClientInfo.HasFeature(ClientInfo.FEATURES.C_AUCTION_HOUSE) then
-		bid = Math.Round(bid, COPPER_PER_SILVER)
-		buyout = Math.Round(buyout, COPPER_PER_SILVER)
+		if ClientInfo.IsRetail() then
+			bid = Math.Round(bid, COPPER_PER_SILVER)
+			buyout = Math.Round(buyout, COPPER_PER_SILVER)
+		end
 		private.itemLocation:SetBagAndSlot(bag, slot)
 		local commodityStatus = C_AuctionHouse.GetItemCommodityStatus(private.itemLocation)
 		if commodityStatus == Enum.ItemCommodityStatus.Item then
