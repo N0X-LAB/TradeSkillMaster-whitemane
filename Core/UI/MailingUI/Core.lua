@@ -204,6 +204,7 @@ function private.FSMCreate()
 
 				assert(not context.frame)
 				context.frame = private.CreateMainFrame()
+				TSM.UI.MailingUI.Inbox.PrepareAutoOpen()
 				context.frame:Show()
 				context.frame:Draw()
 				private.isVisible = true
@@ -233,6 +234,7 @@ function private.FSMCreate()
 				if not context.frame then
 					DoEmote("READ", nil, true)
 					context.frame = private.CreateMainFrame()
+					TSM.UI.MailingUI.Inbox.PrepareAutoOpen()
 					context.frame:Draw()
 					private.isVisible = true
 				end

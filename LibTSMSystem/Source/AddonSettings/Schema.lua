@@ -155,7 +155,8 @@ function Schema.Get()
 	-- [127] added global.internalData.warbankQuantity
 	-- [128] added global.internalData.{warbankMoney,warbankGoldLog,warbankGoldLogLastUpdate}
 	-- [129] updated factionrealm.internalData.crafts
-	return Settings.NewSchema(129, 10)
+	-- [130] added global.mailingOptions.autoOpenMail
+	return Settings.NewSchema(130, 10)
 		:EnterScope("global")
 			:EnterNamespace("debug")
 				:AddBoolean("chatLoggingEnabled", false, 19)
@@ -282,6 +283,7 @@ function Schema.Get()
 				:AddString("deAbovePrice", "0c", 10)
 			:LeaveNamespace()
 			:EnterNamespace("mailingOptions")
+				:AddBoolean("autoOpenMail", false, 130)
 				:AddBoolean("sendItemsIndividually", false, 10)
 				:AddBoolean("inboxMessages", true, 10)
 				:AddBoolean("sendMessages", true, 10)

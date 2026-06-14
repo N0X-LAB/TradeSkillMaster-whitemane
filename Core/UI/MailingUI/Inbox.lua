@@ -33,6 +33,7 @@ local private = {
 	nextUpdate = nil,
 	filterText = "",
 	updateCounterTimer = nil,
+	autoOpenPending = false,
 }
 local PLAYER_NAME = UnitName("player")
 local MAIL_REFRESH_TIME = ClientInfo.IsRetail() and 15 or 60
@@ -46,6 +47,7 @@ local MAIL_REFRESH_TIME = ClientInfo.IsRetail() and 15 or 60
 function Inbox.OnInitialize(settingsDB)
 	private.settings = settingsDB:NewView()
 		:AddKey("global", "mailingUIContext", "mailsScrollingTable")
+		:AddKey("global", "mailingOptions", "autoOpenMail")
 		:AddKey("global", "mailingOptions", "openMailSound")
 	private.updateCounterTimer = DelayTimer.New("INBOX_UPDATE_COUNTER", private.UpdateCountDown)
 	private.FSMCreate()
@@ -58,6 +60,10 @@ function Inbox.IsMailOpened()
 	end
 
 	return private.view:GetElement("view"):GetPath() == "items"
+end
+
+function Inbox.PrepareAutoOpen()
+	private.autoOpenPending = true
 end
 
 
@@ -184,14 +190,26 @@ function private.GetInboxMailsFrame()
 			:SetHeight(74)
 			:SetPadding(8)
 			:SetBackgroundColor("PRIMARY_BG_ALT")
-			:AddChild(UIElements.New("ActionButton", "openAllMail")
+			:AddChild(UIElements.New("Frame", "openAllRow")
+				:SetLayout("HORIZONTAL")
 				:SetHeight(26)
-				:SetText(L["Open All Mail"])
-				:SetScript("OnClick", private.OpenBtnOnClick)
-				:SetModifierText(L["Open Mail"], "SHIFT")
-				:SetModifierText(L["Open All Mail Without Money"], "CTRL")
-				:SetModifierText(L["Open Mail Without Money"], "SHIFT", "CTRL")
-				:SetTooltip(L["Hold SHIFT to not continue after the inbox refreshes and CTRL to not open mail with money attached."])
+				:AddChild(UIElements.New("Checkbox", "autoOpen")
+					:SetWidth("AUTO")
+					:SetMargin(0, 8, 0, 0)
+					:SetFont("BODY_BODY2")
+					:SetText(L["Auto Open"])
+					:SetSettingInfo(private.settings, "autoOpenMail")
+					:SetTooltip(L["Automatically open all mail when the mailbox is opened."])
+				)
+				:AddChild(UIElements.New("ActionButton", "openAllMail")
+					:SetHeight(26)
+					:SetText(L["Open All Mail"])
+					:SetScript("OnClick", private.OpenBtnOnClick)
+					:SetModifierText(L["Open Mail"], "SHIFT")
+					:SetModifierText(L["Open All Mail Without Money"], "CTRL")
+					:SetModifierText(L["Open Mail Without Money"], "SHIFT", "CTRL")
+					:SetTooltip(L["Hold SHIFT to not continue after the inbox refreshes and CTRL to not open mail with money attached."])
+				)
 			)
 			:AddChild(UIElements.New("Frame", "buttons")
 				:SetLayout("HORIZONTAL")
@@ -249,14 +267,26 @@ function private.GetInboxMailsFrame()
 			:SetHeight(74)
 			:SetPadding(8)
 			:SetBackgroundColor("PRIMARY_BG_ALT")
-			:AddChild(UIElements.New("ActionButton", "openAllMail")
+			:AddChild(UIElements.New("Frame", "openAllRow")
+				:SetLayout("HORIZONTAL")
 				:SetHeight(26)
-				:SetText(L["Open Mail"])
-				:SetScript("OnClick", private.OpenBtnOnClick)
-				:SetModifierText(L["Open All Mail"], "SHIFT")
-				:SetModifierText(L["Open Mail Without Money"], "CTRL")
-				:SetModifierText(L["Open All Mail Without Money"], "SHIFT", "CTRL")
-				:SetTooltip(L["Hold SHIFT to continue after the inbox refreshes and CTRL to not open mail with money attached."])
+				:AddChild(UIElements.New("Checkbox", "autoOpen")
+					:SetWidth("AUTO")
+					:SetMargin(0, 8, 0, 0)
+					:SetFont("BODY_BODY2")
+					:SetText(L["Auto Open"])
+					:SetSettingInfo(private.settings, "autoOpenMail")
+					:SetTooltip(L["Automatically open all mail when the mailbox is opened."])
+				)
+				:AddChild(UIElements.New("ActionButton", "openAllMail")
+					:SetHeight(26)
+					:SetText(L["Open Mail"])
+					:SetScript("OnClick", private.OpenBtnOnClick)
+					:SetModifierText(L["Open All Mail"], "SHIFT")
+					:SetModifierText(L["Open Mail Without Money"], "CTRL")
+					:SetModifierText(L["Open All Mail Without Money"], "SHIFT", "CTRL")
+					:SetTooltip(L["Hold SHIFT to continue after the inbox refreshes and CTRL to not open mail with money attached."])
+				)
 			)
 			:AddChild(UIElements.New("Frame", "buttons")
 				:SetLayout("HORIZONTAL")
@@ -722,6 +752,7 @@ function private.InboxFrameOnUpdate(frame)
 	private.UpdateCountDown(true)
 	private.updateCounterTimer:RunForTime(0)
 	private.fsm:ProcessEvent("EV_FRAME_SHOW", frame, private.filterText)
+	private.TryAutoOpen()
 end
 
 function private.InboxFrameOnHide(frame)
@@ -738,6 +769,7 @@ function private.InboxOnDataUpdated()
 		return
 	end
 	private.fsm:ProcessEvent("EV_MAIL_DATA_UPDATED", private.filterText)
+	private.TryAutoOpen()
 end
 
 function private.OpenBtnOnClick(button)
@@ -782,6 +814,19 @@ end
 -- ============================================================================
 -- Private Helper Functions
 -- ============================================================================
+
+function private.TryAutoOpen()
+	if not private.autoOpenPending then
+		return
+	elseif not private.settings.autoOpenMail then
+		private.autoOpenPending = false
+		return
+	elseif private.inboxQuery:Count() == 0 then
+		return
+	end
+	private.autoOpenPending = false
+	private.fsm:ProcessEvent("EV_BUTTON_CLICKED", true, false, private.filterText, nil)
+end
 
 function private.UpdateCountDown(force)
 	if not force then
@@ -866,7 +911,7 @@ function private.FSMCreate()
 		end
 
 		if context.opening then
-			context.frame:GetElement("bottom.openAllMail")
+			context.frame:GetElement("bottom.openAllRow.openAllMail")
 				:SetDisabled(true)
 			context.frame:GetElement("bottom.buttons.openAllSales")
 				:SetDisabled(true)
@@ -901,7 +946,7 @@ function private.FSMCreate()
 				end
 			end
 
-			context.frame:GetElement("bottom.openAllMail")
+			context.frame:GetElement("bottom.openAllRow.openAllMail")
 				:SetDisabled(all == 0)
 				:SetPressed(false)
 			context.frame:GetElement("bottom.buttons.openAllSales")
