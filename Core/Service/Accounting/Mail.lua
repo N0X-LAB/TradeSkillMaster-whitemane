@@ -190,9 +190,9 @@ function private.RecordMail(index, subIndex, resolveNames)
 			return false, true
 		end
 
-		local isValid, itemString, itemQuantity = private.ValidateAuctionItemMail(index, subIndex)
+		local isValid, itemString, itemQuantity, shouldRetry = private.ValidateAuctionItemMail(index, subIndex)
 		if not isValid then
-			return false
+			return false, shouldRetry
 		end
 		local copper = floor(bid / quantity + 0.5)
 		if ClientInfo.IsRetail() then
@@ -297,16 +297,16 @@ function private.RecordMail(index, subIndex, resolveNames)
 		local saleTime = (time() + (daysLeft - 31) * SECONDS_PER_DAY)
 		TSM.Accounting.Money.InsertMoneyTransferIncome(money, sender, saleTime)
 	elseif mailType == Inbox.MAIL_TYPE.EXPIRE.AUCTION then
-		local isValid, itemString, quantity = private.ValidateAuctionItemMail(index, subIndex)
+		local isValid, itemString, quantity, shouldRetry = private.ValidateAuctionItemMail(index, subIndex)
 		if not isValid then
-			return false
+			return false, shouldRetry
 		end
 		local expiredTime = (time() + (daysLeft - 30) * SECONDS_PER_DAY)
 		TSM.Accounting.Auctions.InsertExpire(itemString, quantity, expiredTime)
 	elseif mailType == Inbox.MAIL_TYPE.CANCEL.AUCTION then
-		local isValid, itemString, quantity = private.ValidateAuctionItemMail(index, subIndex)
+		local isValid, itemString, quantity, shouldRetry = private.ValidateAuctionItemMail(index, subIndex)
 		if not isValid then
-			return false
+			return false, shouldRetry
 		end
 		local cancelledTime = (time() + (daysLeft - 30) * SECONDS_PER_DAY)
 		TSM.Accounting.Auctions.InsertCancel(itemString, quantity, cancelledTime)
@@ -323,7 +323,7 @@ function private.ValidateAuctionItemMail(index, subIndex)
 	local itemString = ItemString.Get(link)
 	if not itemString then
 		Log.Err("Failed to get itemString: %s, %s, %s", tostring(index), tostring(subIndex), tostring(link))
-		return false
+		return false, nil, nil, not link
 	elseif not quantity then
 		return false
 	end
@@ -394,12 +394,11 @@ function private.GetItemLink(index, attachIndex)
 				break
 			end
 		end
-		if not foundIndex then
-			error(format("Invalid attachIndex for index %s", tostring(index)))
-		end
-		local speciesId, level, breedQuality = TooltipScanning.GetInboxBattlePetInfo(index, foundIndex)
-		if speciesId and speciesId > 0 then
-			link = ItemInfo.GetLink(strjoin(":", "p", speciesId, level, breedQuality))
+		if foundIndex then
+			local speciesId, level, breedQuality = TooltipScanning.GetInboxBattlePetInfo(index, foundIndex)
+			if speciesId and speciesId > 0 then
+				link = ItemInfo.GetLink(strjoin(":", "p", speciesId, level, breedQuality))
+			end
 		end
 	end
 	return link or Inbox.GetAttachment(index, attachIndex)
