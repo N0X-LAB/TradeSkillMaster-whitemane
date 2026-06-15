@@ -98,6 +98,7 @@ local VALID_PRICE_KEYS = {
 	normalPrice = true,
 	maxPrice = true,
 	undercut = true,
+	bidUndercut = true,
 	cancelRepostThreshold = true,
 	priceReset = true,
 	aboveMax = true,
@@ -111,6 +112,7 @@ local IS_GOLD_PRICE_KEY = {
 	normalPrice = true,
 	maxPrice = true,
 	undercut = nil, -- Set by AuctioningOperation.Load()
+	bidUndercut = nil,
 	priceReset = true,
 	aboveMax = true,
 }
@@ -203,7 +205,9 @@ function AuctioningOperation.Load(localizedName, defaultZeroUndercut, includeBla
 		:AddCustomStringSetting("keepQuantity", "0")
 		:AddCustomStringSetting("maxExpires", "0")
 		:AddNumberSetting("duration", 2, private.SanitizeDuration)
+		:AddBooleanSetting("bidPercentMode", true)
 		:AddNumberSetting("bidPercent", 1)
+		:AddCustomStringSetting("bidUndercut", "1c")
 		:AddCustomStringSetting("undercut", defaultZeroUndercut and "0c" or "1c", private.SanitizeUndercut)
 		:AddCustomStringSetting("minPrice", "check(first(crafting,dbmarket,dbregionmarketavg),max(0.25*avg(crafting,dbmarket,dbregionmarketavg),1.5*vendorsell))")
 		:AddCustomStringSetting("maxPrice", "check(first(crafting,dbmarket,dbregionmarketavg),max(5*avg(crafting,dbmarket,dbregionmarketavg),30*vendorsell))")
@@ -378,6 +382,7 @@ function AuctioningOperation.ValidateForPosting(itemString, num, operationName, 
 	local normalPrice = AuctioningOperation.GetItemPrice(itemString, "normalPrice", operationSettings)
 	local maxPrice = AuctioningOperation.GetItemPrice(itemString, "maxPrice", operationSettings)
 	local undercut = AuctioningOperation.GetItemPrice(itemString, "undercut", operationSettings)
+	local bidUndercut = not operationSettings.bidPercentMode and AuctioningOperation.GetItemPrice(itemString, "bidUndercut", operationSettings) or nil
 	if not minPrice then
 		return false, RESULT.INVALID.ITEM_GROUP.MIN_PRICE, operationSettings.minPrice
 	elseif not maxPrice then
@@ -386,6 +391,8 @@ function AuctioningOperation.ValidateForPosting(itemString, num, operationName, 
 		return false, RESULT.INVALID.ITEM_GROUP.NORMAL_PRICE, operationSettings.normalPrice
 	elseif not undercut then
 		return false, RESULT.INVALID.ITEM_GROUP.UNDERCUT, operationSettings.undercut
+	elseif not operationSettings.bidPercentMode and not bidUndercut then
+		return false, RESULT.INVALID.ITEM_GROUP.UNDERCUT, operationSettings.bidUndercut
 	elseif normalPrice < minPrice then
 		return false, RESULT.INVALID.ITEM_GROUP.NORMAL_BELOW_MIN, operationSettings.normalPrice, operationSettings.minPrice
 	elseif maxPrice < minPrice then
@@ -419,6 +426,7 @@ function AuctioningOperation.MakePostDecision(itemString, lowestAuction, operati
 	local normalPrice = AuctioningOperation.GetItemPrice(itemString, "normalPrice", operationSettings)
 	local maxPrice = AuctioningOperation.GetItemPrice(itemString, "maxPrice", operationSettings)
 	local undercut = AuctioningOperation.GetItemPrice(itemString, "undercut", operationSettings)
+	local bidUndercut = not operationSettings.bidPercentMode and AuctioningOperation.GetItemPrice(itemString, "bidUndercut", operationSettings) or nil
 	local resetPrice = AuctioningOperation.GetItemPrice(itemString, "priceReset", operationSettings)
 	local aboveMax = AuctioningOperation.GetItemPrice(itemString, "aboveMax", operationSettings)
 
@@ -447,7 +455,7 @@ function AuctioningOperation.MakePostDecision(itemString, lowestAuction, operati
 				error("Invalid below min price: "..tostring(operationSettings.priceReset))
 			end
 			buyout = resetPrice
-			bid = max(bid or buyout * operationSettings.bidPercent, minPrice)
+			bid = max(bid or private.GetBidPrice(buyout, operationSettings, bidUndercut), minPrice)
 			activeAuctionsBid = floor(bid)
 			activeAuctionsBuyout = buyout
 		elseif lowestAuction.isBlacklist then
@@ -496,10 +504,10 @@ function AuctioningOperation.MakePostDecision(itemString, lowestAuction, operati
 		seller = lowestAuction.seller
 	end
 	if reason == RESULT.POSTING.BLACKLIST then
-		bid = bid or buyout * operationSettings.bidPercent
+		bid = bid or private.GetBidPrice(buyout, operationSettings, bidUndercut)
 	else
 		buyout = max(buyout, minPrice)
-		bid = max(bid or buyout * operationSettings.bidPercent, minPrice)
+		bid = max(bid or private.GetBidPrice(buyout, operationSettings, bidUndercut), minPrice)
 	end
 	assert(reason == RESULT.POSTING)
 	return reason, seller, bid, buyout, activeAuctionsBid, activeAuctionsBuyout
@@ -708,4 +716,11 @@ function private.SanitizeUndercut(value)
 		return "0c"
 	end
 	return value
+end
+
+function private.GetBidPrice(buyout, operationSettings, bidUndercut)
+	if operationSettings.bidPercentMode then
+		return buyout * operationSettings.bidPercent
+	end
+	return max(buyout - bidUndercut, 1)
 end

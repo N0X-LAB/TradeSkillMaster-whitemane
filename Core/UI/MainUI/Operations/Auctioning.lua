@@ -60,6 +60,7 @@ local SETTING_TOOLTIPS = {
 	keepQuantity = L["The number of items to keep in your bags and not post on the AH. Set this to 0 to disable it."],
 	maxExpires = L["After an item has expired this many times, it will no longer be posted on the AH. Set this to 0 to disable it."],
 	bidPercent = L["When posting auctions, the bid price will be calculated as a percentage of the buyout price based on this setting."],
+	bidUndercut = L["When posting auctions, the bid price will be set this amount below the buyout price."],
 	undercut = L["The amount to undercut the lowest auction by when running a post scan. It's highly recommended to leave this at the default value."],
 	minPrice = L["The lowest price you want TSM to consider posting your auctions for"].." "..L["TSM will always attempt to undercut the cheapest auction as long as it's between your minimum and maximum prices."],
 	priceReset = L["This defines what TSM does when the lowest auction on the AH is below the minimum price you have set."],
@@ -169,28 +170,16 @@ function private.GetPostingSettings()
 			)
 		)
 		:AddChild(TSM.MainUI.Operations.CreateExpandableSection("Auctioning", "priceSettings", L["Posting Price"], L["Adjust the settings below to set how groups attached to this operation will be priced."])
-			:AddChild(TSM.MainUI.Operations.CreateLinkedSettingLine("bidPercent", L["Set bid as percentage of buyout"])
+			:AddChild(TSM.MainUI.Operations.CreateLinkedSettingLine("bidPercentMode", L["Set bid as percentage of buyout"])
 				:SetMargin(0, 0, 0, 12)
-				:AddChild(UIElements.New("Frame", "content")
-					:SetLayout("HORIZONTAL")
-					:SetHeight(24)
-					:AddChild(UIElements.New("Input", "input")
-						:SetMargin(0, 8, 0, 0)
-						:SetBackgroundColor("ACTIVE_BG")
-						:SetValidateFunc(private.BidPercentValidateFunc)
-						:SetDisabled(Operation.HasRelationship("Auctioning", private.currentOperationName, "bidPercent"))
-						:SetValue((operation.bidPercent * 100).."%")
-						:SetScript("OnValueChanged", private.BidPercentOnValueChanged)
-						:SetTooltip(SETTING_TOOLTIPS.bidPercent, "__parent")
-					)
-					:AddChild(UIElements.New("Text", "label")
-						:SetWidth("AUTO")
-						:SetFont("BODY_BODY3")
-						:SetFormattedText(L["Enter a value from %d - %d%%"], 0, 100)
-						:SetTextColor(Operation.HasRelationship("Auctioning", private.currentOperationName, "bidPercent") and "TEXT_DISABLED" or "TEXT")
-					)
+				:AddChild(UIElements.New("ToggleYesNo", "toggle")
+					:SetHeight(18)
+					:SetSettingInfo(operation, "bidPercentMode")
+					:SetDisabled(Operation.HasRelationship("Auctioning", private.currentOperationName, "bidPercentMode"))
+					:SetScript("OnValueChanged", private.BidPercentModeOnValueChanged)
 				)
 			)
+			:AddChildrenWithFunction(private.AddBidPriceSetting)
 			:AddChild(TSM.MainUI.Operations.CreateLinkedPriceInput("undercut", L["Undercut amount"], UNDERCUT_VALIDATE_CONTEXT, nil, nil, SETTING_TOOLTIPS.undercut)
 				:SetMargin(0, 0, 0, 12)
 			)
@@ -222,6 +211,38 @@ function private.GetPostingSettings()
 			)
 			:AddChild(TSM.MainUI.Operations.CreateLinkedPriceInput("normalPrice", L["Normal price"], PRICE_VALIDATE_CONTEXT, nil, nil, SETTING_TOOLTIPS.normalPrice))
 		)
+end
+
+function private.AddBidPriceSetting(frame)
+	local operation = Operation.GetSettings("Auctioning", private.currentOperationName)
+	if operation.bidPercentMode then
+		frame:AddChild(TSM.MainUI.Operations.CreateLinkedSettingLine("bidPercent", L["Bid percentage"])
+			:SetMargin(0, 0, 0, 12)
+				:AddChild(UIElements.New("Frame", "content")
+					:SetLayout("HORIZONTAL")
+					:SetHeight(24)
+					:AddChild(UIElements.New("Input", "input")
+						:SetMargin(0, 8, 0, 0)
+						:SetBackgroundColor("ACTIVE_BG")
+						:SetValidateFunc(private.BidPercentValidateFunc)
+						:SetDisabled(Operation.HasRelationship("Auctioning", private.currentOperationName, "bidPercent"))
+						:SetValue((operation.bidPercent * 100).."%")
+						:SetScript("OnValueChanged", private.BidPercentOnValueChanged)
+						:SetTooltip(SETTING_TOOLTIPS.bidPercent, "__parent")
+					)
+					:AddChild(UIElements.New("Text", "label")
+						:SetWidth("AUTO")
+						:SetFont("BODY_BODY3")
+						:SetFormattedText(L["Enter a value from %d - %d%%"], 0, 100)
+						:SetTextColor(Operation.HasRelationship("Auctioning", private.currentOperationName, "bidPercent") and "TEXT_DISABLED" or "TEXT")
+					)
+				)
+			)
+	else
+		frame:AddChild(TSM.MainUI.Operations.CreateLinkedPriceInput("bidUndercut", L["Undercut bid price"], UNDERCUT_VALIDATE_CONTEXT, "1c", nil, SETTING_TOOLTIPS.bidUndercut)
+			:SetMargin(0, 0, 0, 12)
+		)
+	end
 end
 
 function private.AddStackSizeSettings(frame)
@@ -352,6 +373,10 @@ function private.BidPercentValidateFunc(_, value)
 		return false, L["Bid percent must be between 0 and 100."]
 	end
 	return true
+end
+
+function private.BidPercentModeOnValueChanged(toggle)
+	TSM.MainUI.Operations.ShowOperationSettings(toggle:GetBaseElement(), "Auctioning", private.currentOperationName)
 end
 
 function private.BidPercentOnValueChanged(input)
