@@ -849,7 +849,7 @@ function private.ProfitPctVirtualField(craftString)
 end
 
 function private.SaleRateVirtualField(itemString)
-	return TSM.AuctionDB.GetRegionItemData(itemString, "regionSalePercent") or Math.GetNan()
+	return TSM.AuctionDB.GetRegionItemData(itemString, "regionSalePercent") or TSM.Accounting.GetSaleRate(itemString) or Math.GetNan()
 end
 
 function private.GetRestockHelpMessage(itemString)

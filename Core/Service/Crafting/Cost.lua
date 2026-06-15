@@ -110,7 +110,7 @@ end
 
 function Cost.GetSaleRateByCraftString(craftString)
 	local itemString = TSM.Crafting.GetItemString(craftString)
-	return itemString and CustomString.GetSourceValue("DBRegionSaleRate", itemString) or nil
+	return itemString and (CustomString.GetSourceValue("DBRegionSaleRate", itemString) or TSM.Accounting.GetSaleRate(itemString)) or nil
 end
 
 function Cost.GetLowestCostByItem(itemString, optionalMats, qualityMats)
