@@ -339,6 +339,7 @@ function AuctionBuyScan.__private:_ActionHandler(manager, state, action, ...)
 		state.numBought = 0
 		state.numBid = 0
 		state.numConfirmed = 0
+		AuctionScan.StopFindThread()
 		if state.auctionScan then
 			state.auctionScan:Release()
 			state.auctionScan = nil

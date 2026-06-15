@@ -61,6 +61,7 @@ function FindThread.StopFindAuction(noKill)
 	private.callback = nil
 	if not noKill then
 		Threading.Kill(private.threadId)
+		private.isRunning = false
 	end
 end
 
