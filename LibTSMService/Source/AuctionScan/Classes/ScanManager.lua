@@ -535,9 +535,20 @@ function AuctionScanManager.__private:_ProcessQuery(query)
 		if self._nextSearchItemFunction then
 			baseItemString = self._nextSearchItemFunction()
 			row = baseItemString and rows[baseItemString]
+			if row and row:GetBaseItemString() ~= baseItemString then
+				rows[baseItemString] = nil
+				row = nil
+			end
 		end
-		if not row then
+		while not row do
 			baseItemString, row = next(rows)
+			if not row then
+				break
+			elseif row:GetBaseItemString() ~= baseItemString then
+				-- The row was removed and released while this scan was paused.
+				rows[baseItemString] = nil
+				row = nil
+			end
 		end
 		if not row then
 			break

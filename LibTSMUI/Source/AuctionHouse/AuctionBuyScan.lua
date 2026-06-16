@@ -549,7 +549,11 @@ function AuctionBuyScan.__private:_ActionHandler(manager, state, action, ...)
 				state.maxQuantity = maxQuantity or 1
 				state.defaultBuyQuantity = state.numFound
 			end
-			assert(state.numBidOrBought == 0 and state.numConfirmed == 0)
+			if state.numBidOrBought ~= 0 or state.numConfirmed ~= 0 then
+				state.numBid = 0
+				state.numBought = 0
+				state.numConfirmed = 0
+			end
 		else
 			if state.selectedAuction:IsSubRow() then
 				-- Failed to find this auction, so remove it
@@ -638,6 +642,9 @@ function AuctionBuyScan.__private:_ActionHandler(manager, state, action, ...)
 			end
 			-- Rescan for this item
 			if state.auctionScrollTable and state.auctionScrollTable:GetSelectedRow() then
+				state.numBid = 0
+				state.numBought = 0
+				state.numConfirmed = 0
 				manager:ProcessAction("ACTION_FIND_SELECTED_AUCTION")
 			end
 		end
@@ -710,6 +717,9 @@ function AuctionBuyScan.__private:_ActionHandler(manager, state, action, ...)
 			end
 			-- Rescan for this item
 			if state.auctionScrollTable and state.auctionScrollTable:GetSelectedRow() then
+				state.numBid = 0
+				state.numBought = 0
+				state.numConfirmed = 0
 				manager:ProcessAction("ACTION_FIND_SELECTED_AUCTION")
 			end
 		end
@@ -756,7 +766,7 @@ function AuctionBuyScan.__private:_ActionHandler(manager, state, action, ...)
 			:SetAuction(itemString, bid, buyout, quantity, undercut, state.postDuration)
 			:SetManager(manager)
 			:SetAction("OnPostClicked", "ACTION_POST_AUCTION_CONFIRMED")
-			:SetScript("OnHide", manager:CallbackToProcessAction("ACITON_HANDLE_POST_DIALOG_HIDDEN"))
+			:SetScript("OnHide", manager:CallbackToProcessAction("ACTION_HANDLE_POST_DIALOG_HIDDEN"))
 		)
 		state.postDialogShown = true
 	elseif action == "ACTION_POST_AUCTION_CONFIRMED" then
@@ -789,7 +799,7 @@ function AuctionBuyScan.__private:_ActionHandler(manager, state, action, ...)
 		else
 			ChatMessage.PrintUser(L["Failed to post auction due to the auction house being busy. Ensure no other addons are scanning the AH and try again."])
 		end
-	elseif action == "ACITON_HANDLE_POST_DIALOG_HIDDEN" then
+	elseif action == "ACTION_HANDLE_POST_DIALOG_HIDDEN" then
 		state.postDialogShown = false
 	elseif action == "ACTION_HIDE_POST_DIALOG" then
 		if state.postDialogShown then
