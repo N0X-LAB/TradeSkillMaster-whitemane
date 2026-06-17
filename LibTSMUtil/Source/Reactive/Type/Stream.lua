@@ -10,6 +10,7 @@ local ReactivePublisher = LibTSMUtil:IncludeClassType("ReactivePublisher")
 local Table = LibTSMUtil:Include("Lua.Table")
 local NO_INITIAL_VALUE = newproxy()
 local NIL_INITIAL_VALUE = newproxy()
+local NIL_DATA = newproxy()
 
 
 
@@ -34,6 +35,7 @@ function ReactiveStream.__private:__init()
 	self._scripts = {}
 	self._sending = false
 	self._sendQueue = {}
+	self._dataQueue = {}
 end
 
 
@@ -69,19 +71,31 @@ end
 ---@param data table The data to send
 function ReactiveStream:Send(data)
 	local sendQueue = self._sendQueue
-	assert(not self._sending and #sendQueue == 0)
+	local dataQueue = self._dataQueue
+	if self._sending then
+		tinsert(dataQueue, data == nil and NIL_DATA or data)
+		return
+	end
+	assert(#sendQueue == 0)
 	self._sending = true
-	local publishers = self._publishers
-	for i = 1, #publishers do
-		sendQueue[i] = publishers[i]
-	end
-	for i = 1, #sendQueue do
-		local publisher = sendQueue[i]
-		if self._publishers[publisher] ~= nil then
-			publisher:_HandleData(data)
+	while true do
+		local publishers = self._publishers
+		for i = 1, #publishers do
+			sendQueue[i] = publishers[i]
 		end
+		for i = 1, #sendQueue do
+			local publisher = sendQueue[i]
+			if self._publishers[publisher] ~= nil then
+				publisher:_HandleData(data)
+			end
+		end
+		wipe(sendQueue)
+		if #dataQueue == 0 then
+			break
+		end
+		data = tremove(dataQueue, 1)
+		data = data ~= NIL_DATA and data or nil
 	end
-	wipe(sendQueue)
 	self._sending = false
 end
 

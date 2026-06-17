@@ -558,38 +558,40 @@ function AuctionScanManager.__private:_ProcessQuery(query)
 		if self._currentSearchChangedCallback then
 			self:_currentSearchChangedCallback(baseItemString)
 		end
-		-- store all the existing auctionIds so we can see what changed
-		local prevAuctionIds = Threading.AcquireSafeTempTable()
-		for _, subRow in row:SubRowIterator() do
-			local _, auctionId = subRow:GetListingInfo()
-			assert(not prevAuctionIds[auctionId])
-			prevAuctionIds[auctionId] = true
-		end
-		-- send the query for this item
-		while not self:_DoSearch(query, row) do
-			if self._shouldPause then
-				-- this search failed due to a pause request, so try again after we're resumed
-				self:_Pause()
-				-- wipe the search results since we're going to do another search
-				row:WipeSearchResults()
-			else
-				TempTable.Release(prevAuctionIds)
-				TempTable.Release(rows)
-				return false, numNewResults
+		if row:GetBaseItemString() == baseItemString then
+			-- store all the existing auctionIds so we can see what changed
+			local prevAuctionIds = Threading.AcquireSafeTempTable()
+			for _, subRow in row:SubRowIterator() do
+				local _, auctionId = subRow:GetListingInfo()
+				assert(not prevAuctionIds[auctionId])
+				prevAuctionIds[auctionId] = true
 			end
-		end
+			-- send the query for this item
+			while not self:_DoSearch(query, row) do
+				if self._shouldPause then
+					-- this search failed due to a pause request, so try again after we're resumed
+					self:_Pause()
+					-- wipe the search results since we're going to do another search
+					row:WipeSearchResults()
+				else
+					TempTable.Release(prevAuctionIds)
+					TempTable.Release(rows)
+					return false, numNewResults
+				end
+			end
 
-		local numSubRows = row:GetNumSubRows()
-		for _, subRow in row:SubRowIterator() do
-			local _, auctionId = subRow:GetListingInfo()
-			if not prevAuctionIds[auctionId] then
-				numNewResults = numNewResults + 1
+			local numSubRows = row:GetNumSubRows()
+			for _, subRow in row:SubRowIterator() do
+				local _, auctionId = subRow:GetListingInfo()
+				if not prevAuctionIds[auctionId] then
+					numNewResults = numNewResults + 1
+				end
 			end
-		end
-		TempTable.Release(prevAuctionIds)
-		if numSubRows == 0 then
-			-- Remove this row since there are no search results
-			query:RemoveResultRow(row)
+			TempTable.Release(prevAuctionIds)
+			if numSubRows == 0 then
+				-- Remove this row since there are no search results
+				query:RemoveResultRow(row)
+			end
 		end
 
 		self:_NotifyProgressUpdate()
