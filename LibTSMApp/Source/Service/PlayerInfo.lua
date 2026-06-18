@@ -106,6 +106,14 @@ function PlayerInfo.GetPlayerGuild(character, factionrealm)
 	return private.settings:GetForScopeKey("characterGuilds", factionrealm)[character]
 end
 
+---Checks whether or not a guild is ignored.
+---@param guild string The guild name
+---@param factionrealm string The factionrealm
+---@return boolean
+function PlayerInfo.IsGuildIgnored(guild, factionrealm)
+	return private.settings:GetForScopeKey("ignoreGuilds", factionrealm)[guild] and true or false
+end
+
 ---Check whether or not a player belongs to the user.
 ---@param target string The name of the player
 ---@param includeAlts boolean Whether or not to include alts

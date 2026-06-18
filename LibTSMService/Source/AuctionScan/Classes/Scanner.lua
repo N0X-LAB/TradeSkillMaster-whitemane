@@ -28,6 +28,7 @@ local private = {
 	useCachedData = nil,
 	retryCount = 0,
 	requestFuture = Future.New("AUCTION_SCANNER_FUTURE"),
+	requestFutureStarted = false,
 	requestResult = nil,
 	fsm = nil,
 	retryTimer = nil,
@@ -52,6 +53,7 @@ Scanner:OnModuleLoad(function()
 	private.retryTimer = DelayTimer.New("AUCTION_SCANNER_RETRY", private.RetryHandler)
 	private.doneTimer = DelayTimer.New("AUCTION_SCANNER_DONE", private.RequestDoneHandler)
 	private.requestFuture:SetScript("OnCleanup", function()
+		private.requestFutureStarted = false
 		private.doneTimer:Cancel()
 		private.fsm:ProcessEvent("EV_CANCEL")
 	end)
@@ -393,6 +395,10 @@ end)
 ---@param callback fun(query: AuctionQuery, row: AuctionRow) A function to call with results
 ---@return Future
 function Scanner.Browse(query, resolveSellers, callback)
+	if private.requestFutureStarted then
+		return nil
+	end
+	private.requestFutureStarted = true
 	private.requestFuture:Start()
 	private.fsm:ProcessEvent("EV_START_BROWSE", query, resolveSellers, callback)
 	return private.requestFuture
@@ -405,6 +411,10 @@ end
 ---@return Future
 function Scanner.BrowseNoScan(query, itemKeys, callback)
 	assert(LibTSMService.IsModernAuctionHouse())
+	if private.requestFutureStarted then
+		return nil
+	end
+	private.requestFutureStarted = true
 	private.requestFuture:Start()
 	private.fsm:ProcessEvent("EV_START_BROWSE_NO_SCAN", query, itemKeys, callback)
 	return private.requestFuture
@@ -419,6 +429,10 @@ end
 ---@return Future
 function Scanner.Search(query, resolveSellers, useCachedData, browseRow, callback)
 	assert(LibTSMService.IsModernAuctionHouse())
+	if private.requestFutureStarted then
+		return nil
+	end
+	private.requestFutureStarted = true
 	private.requestFuture:Start()
 	private.fsm:ProcessEvent("EV_START_SEARCH", query, resolveSellers, useCachedData, browseRow, callback)
 	return private.requestFuture
@@ -426,6 +440,9 @@ end
 
 ---Cancels any in progress scan.
 function Scanner.Cancel()
+	if not private.requestFutureStarted then
+		return
+	end
 	private.requestFuture:Done(false)
 end
 

@@ -45,7 +45,9 @@ function Gathering.OnInitialize(settingsDB)
 		:AddKey("profile", "gatheringOptions", "sources")
 		:AddKey("factionrealm", "gatheringContext", "crafter")
 		:AddKey("factionrealm", "gatheringContext", "professions")
+		:AddKey("global", "craftingOptions", "ignoreGuilds")
 		:AddKey("global", "coreOptions", "regionWide")
+		:RegisterCallback("ignoreGuilds", private.UpdateDB)
 	if not ClientInfo.HasFeature(ClientInfo.FEATURES.GUILD_BANK) then
 		Table.RemoveByValue(private.settings.sources, "guildBank")
 		Table.RemoveByValue(private.settings.sources, "altGuildBank")
@@ -340,6 +342,10 @@ function private.UpdateDB()
 	TempTable.Release(matQueue)
 end
 
+function private.IsGuildIgnored(guild, factionrealm)
+	return private.settings.ignoreGuilds[guild] or PlayerInfo.IsGuildIgnored(guild, factionrealm)
+end
+
 function private.ProcessSource(itemString, numNeed, source, sourceList)
 	local crafter = private.settings.crafter
 	if source == "openMail" then
@@ -368,7 +374,7 @@ function private.ProcessSource(itemString, numNeed, source, sourceList)
 		end
 	elseif source == "guildBank" then
 		local guild = PlayerInfo.GetPlayerGuild(crafter, SessionInfo.GetFactionrealmName())
-		local guildBankQuantity = guild and AltTracking.GetGuildQuantity(itemString, guild) or 0
+		local guildBankQuantity = guild and not private.IsGuildIgnored(guild, SessionInfo.GetFactionrealmName()) and AltTracking.GetGuildQuantity(itemString, guild) or 0
 		if guildBankQuantity > 0 then
 			guildBankQuantity = min(guildBankQuantity, numNeed)
 			if crafter == SessionInfo.GetCharacterName() then
@@ -451,7 +457,7 @@ function private.ProcessSource(itemString, numNeed, source, sourceList)
 		end
 	elseif source == "altGuildBank" then
 		local currentGuild = PlayerInfo.GetPlayerGuild(SessionInfo.GetCharacterName(), SessionInfo.GetFactionrealmName())
-		if currentGuild and crafter ~= SessionInfo.GetCharacterName() then
+		if currentGuild and crafter ~= SessionInfo.GetCharacterName() and not private.IsGuildIgnored(currentGuild, SessionInfo.GetFactionrealmName()) then
 			-- we are on an alt, so see if we can gather items from this character's guild bank
 			local guildBankQuantity = Guild.GetQuantity(itemString)
 			if guildBankQuantity > 0 then
@@ -469,7 +475,7 @@ function private.ProcessSource(itemString, numNeed, source, sourceList)
 		local altCharacters = TempTable.Acquire()
 		for _, character, factionrealm in PlayerInfo.CharacterIterator(true) do
 			local guild = PlayerInfo.GetPlayerGuild(character, factionrealm)
-			if guild and guild ~= currentGuild then
+			if guild and guild ~= currentGuild and not private.IsGuildIgnored(guild, factionrealm) then
 				local guildBankQuantity = AltTracking.GetGuildQuantity(itemString, guild)
 				if guildBankQuantity > 0 then
 					local characterKey = nil
