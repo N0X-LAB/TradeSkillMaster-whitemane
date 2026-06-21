@@ -313,6 +313,9 @@ function List.__protected:_DrawRows(startRowIndex, endRowIndex)
 		local dataIndex = i + dataOffset
 		assert(dataIndex <= self._numRows)
 		local row = self._rowElements[i]
+		if not row then
+			return
+		end
 		row:SetDataIndex(dataIndex)
 		self:_HandleRowDraw(row)
 	end
@@ -324,7 +327,11 @@ function List.__protected:_DrawRowsForUpdatedData(startDataIndex, endDataIndex)
 	startDataIndex = max(startDataIndex, dataOffset + 1)
 	endDataIndex = min(endDataIndex, numVisibleRows + dataOffset)
 	for i = startDataIndex, endDataIndex do
-		self:_HandleRowDraw(self._rowElements[i - dataOffset])
+		local row = self._rowElements[i - dataOffset]
+		if not row then
+			return
+		end
+		self:_HandleRowDraw(row)
 	end
 end
 

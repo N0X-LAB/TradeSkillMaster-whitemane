@@ -14,6 +14,7 @@ local ItemString = TSM.LibTSMTypes:Include("Item.ItemString")
 local TextureAtlas = TSM.LibTSMService:Include("UI.TextureAtlas")
 local ItemInfo = TSM.LibTSMService:Include("Item.ItemInfo")
 local PlayerInfo = TSM.LibTSMApp:Include("Service.PlayerInfo")
+local AddonSettings = TSM.LibTSMApp:Include("Service.AddonSettings")
 local UIElements = TSM.LibTSMUI:Include("Util.UIElements")
 local UIUtils = TSM.LibTSMUI:Include("Util.UIUtils")
 local Reactive = TSM.LibTSMUtil:Include("Reactive")
@@ -60,7 +61,7 @@ function Shopping.OnInitialize(settingsDB)
 		:SuppressActionLog("ACTION_FILTER_INPUT_CHANGED")
 
 	-- Create the auction buy scan
-	private.auctionBuyScan = AuctionBuyScan.NewBrose(L["Browse"], private.IsPlayer, private.GetAlertThreshold)
+	private.auctionBuyScan = AuctionBuyScan.NewBrose(L["Browse"], private.IsPlayer, private.GetAlertThreshold, private.GetPostUndercut, private.GetPostBidUndercut)
 
 	-- Register this page with the Auction UI
 	local function GetFrame()
@@ -496,6 +497,20 @@ end
 
 function private.GetAlertThreshold(itemString)
 	return private.settings.buyoutConfirm and (CustomString.GetValue(private.settings.buyoutAlertSource, itemString) or 0) or nil
+end
+
+function private.GetPostUndercut(itemString)
+	local savedShoppingSearches = private.GetSavedShoppingSearches()
+	return CustomString.GetValue(savedShoppingSearches.shoppingPostUndercut or "1c", itemString) or 0
+end
+
+function private.GetPostBidUndercut(itemString, itemDisplayedBid, itemBuyout, buyoutUndercut)
+	local savedShoppingSearches = private.GetSavedShoppingSearches()
+	return savedShoppingSearches.shoppingPostBidUndercut and (itemDisplayedBid - itemBuyout + buyoutUndercut + 1) or buyoutUndercut
+end
+
+function private.GetSavedShoppingSearches()
+	return AddonSettings.GetDB():Get("global", nil, "userData", "savedShoppingSearches")
 end
 
 function private.GetSearchListFields(listType, index, ...)

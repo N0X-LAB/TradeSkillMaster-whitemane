@@ -34,7 +34,8 @@ function ShoppingPostDialog:__init(frame)
 		bid = nil,
 		buyout = nil,
 		stackSize = nil,
-		undercut = nil,
+		bidUndercut = nil,
+		buyoutUndercut = nil,
 		duration = nil,
 	}
 end
@@ -63,17 +64,19 @@ end
 ---@param bid number The per-item bid
 ---@param buyout number The per-item buyout
 ---@param stackSize number The stack size being posted
----@param undercut number The amount to undercut by
+---@param bidUndercut number The amount to undercut the bid by
+---@param buyoutUndercut number The amount to undercut the buyout by
 ---@param duration number The auction duration
 ---@return ShoppingPostDialog
-function ShoppingPostDialog:SetAuction(itemString, bid, buyout, stackSize, undercut, duration)
+function ShoppingPostDialog:SetAuction(itemString, bid, buyout, stackSize, bidUndercut, buyoutUndercut, duration)
 	self._auction.itemString = itemString
 	self._auction.bid = bid
 	self._auction.buyout = buyout
 	self._auction.stackSize = stackSize
-	self._auction.undercut = undercut
+	self._auction.bidUndercut = bidUndercut
+	self._auction.buyoutUndercut = buyoutUndercut
 	self._auction.duration = duration
-	self:GetElement("view.posting"):SetAuction(self._auction.itemString, self._auction.duration, self._auction.bid, self._auction.buyout, 1, self._auction.stackSize, self._auction.undercut)
+	self:GetElement("view.posting"):SetAuction(self._auction.itemString, self._auction.duration, self._auction.bid, self._auction.buyout, 1, self._auction.stackSize, self._auction.bidUndercut, self._auction.buyoutUndercut)
 	return self
 end
 
@@ -89,7 +92,7 @@ function ShoppingPostDialog.__private:_GetViewContentFrame(_, path)
 			:SetAction("OnItemEditClicked", "ACTION_ITEM_EDIT_CLICKED")
 			:SetAction("OnPostClicked", "ACTION_POST_CLICKED")
 		if self._auction.itemString then
-			frame:SetAuction(self._auction.itemString, self._auction.duration, self._auction.bid, self._auction.buyout, 1, self._auction.stackSize, self._auction.undercut)
+			frame:SetAuction(self._auction.itemString, self._auction.duration, self._auction.bid, self._auction.buyout, 1, self._auction.stackSize, self._auction.bidUndercut, self._auction.buyoutUndercut)
 		end
 		return frame
 	elseif path == "selection" then

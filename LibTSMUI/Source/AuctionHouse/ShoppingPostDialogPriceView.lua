@@ -37,7 +37,8 @@ ShoppingPostDialogPriceView:_ExtendStateSchema()
 	:AddBooleanField("noMoney", false)
 	:AddNumberField("bagQuantity", 0)
 	:AddNumberField("baseItemBagQuantity", 0)
-	:AddNumberField("undercut", 0)
+	:AddNumberField("bidUndercut", 0)
+	:AddNumberField("buyoutUndercut", 0)
 	:AddNumberField("maxPostStack", 0)
 	:AddNumberField("maxItemStack", 0)
 	:Commit()
@@ -261,10 +262,12 @@ end
 ---@param duration number The auction duration
 ---@param bid number The per-item bid
 ---@param buyout number The per-item buyout
+---@param numStacks number The number of stacks being posted
 ---@param stackSize number The stack size being posted
----@param undercut number The amount to undercut by
+---@param bidUndercut number The amount to undercut the bid by
+---@param buyoutUndercut number The amount to undercut the buyout by
 ---@return ShoppingPostDialogPriceView
-function ShoppingPostDialogPriceView:SetAuction(itemString, duration, bid, buyout, stackSize, undercut)
+function ShoppingPostDialogPriceView:SetAuction(itemString, duration, bid, buyout, numStacks, stackSize, bidUndercut, buyoutUndercut)
 	assert(not self._bagQuery and not self._baseItemBagQuery)
 	self._bagQuery = BagTracking.CreateQueryBagsItemAuctionable(itemString)
 	self:AddCancellable(self._bagQuery:Publisher()
@@ -279,10 +282,11 @@ function ShoppingPostDialogPriceView:SetAuction(itemString, duration, bid, buyou
 		:AssignToTableKey(self._state, "baseItemBagQuantity")
 	)
 	self._state.itemString = itemString
-	self._state.numStacks = 1
+	self._state.numStacks = numStacks
 	self._state.stackSize = stackSize
 	self._state.duration = duration
-	self._state.undercut = undercut
+	self._state.bidUndercut = bidUndercut
+	self._state.buyoutUndercut = buyoutUndercut
 	self._originalPrices.bid = bid
 	self._originalPrices.buyout = buyout
 	self:GetElement("price"):SetAuction(itemString, bid, buyout, self._state.numStacks, self._state.stackSize)
@@ -323,8 +327,8 @@ function ShoppingPostDialogPriceView.__private:_ActionHandler(manager, state, ac
 		if perItem then
 			return
 		end
-		local bid = self._originalPrices.bid * state.stackSize - state.undercut
-		local buyout = self._originalPrices.buyout * state.stackSize - state.undercut
+		local bid = self._originalPrices.bid * state.stackSize - state.bidUndercut
+		local buyout = self._originalPrices.buyout * state.stackSize - state.buyoutUndercut
 		self:GetElement("price"):SetAuction(state.itemString, bid, buyout, state.numStacks, state.stackSize)
 	elseif action == "ACTION_MAX_NUM_STACKS" then
 		local maxNumStacks = min(floor(state.bagQuantity / state.stackSize), 5000)
@@ -355,6 +359,9 @@ function ShoppingPostDialogPriceView.__private:_ActionHandler(manager, state, ac
 		if perItem and ClientInfo.HasFeature(ClientInfo.FEATURES.AH_STACKS) then
 			bid = bid * state.stackSize
 			buyout = buyout * state.stackSize
+		end
+		if state.bidUndercut ~= state.buyoutUndercut then
+			bid = max(buyout - 1, 1)
 		end
 		self:_SendActionScript("OnPostClicked", state.itemString, state.duration, state.stackSize, state.numStacks, bid, buyout)
 	else

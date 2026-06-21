@@ -284,9 +284,9 @@ function TradeSkill.GetResult(spellId)
 		if LibTSMWoW.IsCataClassic() then
 			itemLink = itemLink or GetTradeSkillRecipeLink(spellId)
 		end
-		local indirectSpellId = strmatch(itemLink, "enchant:(%d+)")
+		local indirectSpellId = itemLink and strmatch(itemLink, "enchant:(%d+)")
 		if not indirectSpellId then
-			indirectResultId = strmatch(itemLink, "item:(%d+)") or strmatch(itemLink, "spell:(%d+)")
+			indirectResultId = itemLink and (strmatch(itemLink, "item:(%d+)") or strmatch(itemLink, "spell:(%d+)"))
 		end
 		indirectSpellId = indirectSpellId and tonumber(indirectSpellId)
 		indirectResultId = indirectResultId and tonumber(indirectResultId)

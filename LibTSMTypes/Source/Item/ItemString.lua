@@ -267,7 +267,8 @@ function private.ToItemString(item)
 			itemId = strmatch(item, "^[ip]:(%d+)$")
 		end
 		if itemId then
-			if tonumber(itemId) > ITEM_MAX_ID then
+			itemId = tonumber(itemId)
+			if itemId < 0 or itemId > ITEM_MAX_ID then
 				return nil
 			end
 			-- This is already an itemString
@@ -275,7 +276,7 @@ function private.ToItemString(item)
 		end
 	elseif paramType == "number" or tonumber(item) then
 		local itemId = tonumber(item)
-		if itemId > ITEM_MAX_ID then
+		if itemId < 0 or itemId > ITEM_MAX_ID then
 			return nil
 		end
 		-- assume this is an itemId
@@ -339,6 +340,10 @@ function private.RemoveExtra(itemString)
 end
 
 function private.FixItemString(itemString)
+	local itemId = tonumber(strmatch(itemString, "^i:([0-9%-]+)"))
+	if not itemId or itemId < 0 or itemId > ITEM_MAX_ID then
+		return nil
+	end
 	itemString = gsub(itemString, ":0:", "::") -- remove 0s which are in the middle
 	itemString = private.RemoveExtra(itemString)
 	return private.FilterBonusIdsAndModifiers(itemString, strsplit(":", itemString))
@@ -426,6 +431,9 @@ end
 
 function private.ToBaseItemString(itemString)
 	local baseItemString = strmatch(itemString, "[ip]:%d+")
+	if not baseItemString then
+		return nil
+	end
 	if baseItemString ~= itemString then
 		private.hasNonBaseItemStrings[baseItemString] = true
 	end

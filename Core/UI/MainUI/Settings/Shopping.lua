@@ -13,9 +13,16 @@ local Item = TSM.LibTSMWoW:Include("API.Item")
 local Reactive = TSM.LibTSMUtil:Include("Reactive")
 local UIManager = TSM.LibTSMUtil:IncludeClassType("UIManager")
 local private = {
+	addonSettings = nil,
 	manager = nil, ---@type UIManager
 	settings = nil,
+	postSettings = nil,
 }
+local POST_SETTINGS_DEFAULTS = {
+	shoppingPostUndercut = "1c",
+	shoppingPostBidUndercut = false,
+}
+local POST_SETTINGS_METHODS = {}
 local SETTING_TOOLTIPS = {
 	searchAutoFocus = L["When enabled, the search input in the Browse tab of the AH will automatically be focused to allow for quickly searching the AH."],
 	buyoutConfirm = L["If enabled, TSM will display an additional confirmation when attempting to buy an auction above the value set in the 'Buyout alert source' setting. This can help avoid accidental purchases of expensive auctions."],
@@ -23,6 +30,8 @@ local SETTING_TOOLTIPS = {
 	maxDeSearchPercent = L["When running a Disenchant search, only auctions which are listed for below this percentage of their disenchant value will be displayed in the search results."],
 	pctSource = L["This custom string defines how TSM determines the market value of items for calculating the '%' column in the search results. This value is only used when running a manual search in the Browse tab of the AH."],
 	buyoutAlertSource = L["TSM will display an additional confirmation when attempting to buy an auction above this value. This can help avoid accidental purchases of expensive auctions."],
+	shoppingPostUndercut = L["The amount to undercut the lowest auction by when posting from Browsing."],
+	shoppingPostBidUndercut = L["If enabled, the bid price will be undercut by 1c when posting from Browsing."],
 	sniperSound = L["The sound to play when an auction is found by the Sniper scan."],
 }
 local STATE_SCHEMA = Reactive.CreateStateSchema("SHOPPING_SETTINGS_UI_STATE")
@@ -72,6 +81,10 @@ end
 
 ---@param state ShoppingSettingsUIState
 function private.GetShoppingSettingsFrame(state)
+	private.postSettings = private.postSettings or setmetatable({}, {
+		__index = private.PostSettingsIndex,
+		__newindex = private.PostSettingsNewIndex,
+	})
 	state.buyoutConfirmationAlertEnabled = private.settings.buyoutConfirm
 	UIUtils.AnalyticsRecordPathChange("main", "settings", "shopping")
 	local frame = UIElements.New("ScrollFrame", "shoppingSettings")
@@ -93,6 +106,22 @@ function private.GetShoppingSettingsFrame(state)
 			)
 			:AddChild(TSM.MainUI.Settings.CreateInputWithReset("marketValueSourceField", L["Market value price source"], private.settings, "pctSource", nil, nil, SETTING_TOOLTIPS.pctSource)
 				:SetMargin(0, 0, 0, 12)
+			)
+			:AddChild(TSM.MainUI.Settings.CreateInputWithReset("shoppingPostUndercut", L["Browsing post undercut amount"], private.postSettings, "shoppingPostUndercut", nil, nil, SETTING_TOOLTIPS.shoppingPostUndercut)
+				:SetMargin(0, 0, 0, 12)
+			)
+			:AddChild(UIElements.New("Frame", "shoppingPostBidUndercutFrame")
+				:SetLayout("HORIZONTAL")
+				:SetHeight(20)
+				:SetMargin(0, 0, 0, 12)
+				:AddChild(UIElements.New("Checkbox", "checkbox")
+					:SetWidth("AUTO")
+					:SetFont("BODY_BODY2_MEDIUM")
+					:SetText(L["Undercut bid price by 1c when posting from Browsing"])
+					:SetSettingInfo(private.postSettings, "shoppingPostBidUndercut")
+					:SetTooltip(SETTING_TOOLTIPS.shoppingPostBidUndercut)
+				)
+				:AddChild(UIElements.New("Spacer", "spacer"))
 			)
 			:AddChild(UIElements.New("Frame", "showConfirmFrame")
 				:SetLayout("HORIZONTAL")
@@ -179,6 +208,41 @@ function private.GetShoppingSettingsFrame(state)
 	return frame
 end
 
+
+
+
+-- ============================================================================
+-- Private Helper Functions
+-- ============================================================================
+
+function private.PostSettingsIndex(_, key)
+	if POST_SETTINGS_METHODS[key] then
+		return POST_SETTINGS_METHODS[key]
+	end
+	local savedShoppingSearches = private.GetSavedShoppingSearches()
+	local value = savedShoppingSearches[key]
+	return value ~= nil and value or POST_SETTINGS_DEFAULTS[key]
+end
+
+function private.PostSettingsNewIndex(_, key, value)
+	assert(POST_SETTINGS_DEFAULTS[key] ~= nil)
+	local savedShoppingSearches = private.GetSavedShoppingSearches()
+	savedShoppingSearches[key] = value ~= POST_SETTINGS_DEFAULTS[key] and value or nil
+end
+
+function POST_SETTINGS_METHODS:GetDefaultReadOnly(key)
+	return POST_SETTINGS_DEFAULTS[key]
+end
+
+function POST_SETTINGS_METHODS:ResetToDefault(key)
+	local savedShoppingSearches = private.GetSavedShoppingSearches()
+	savedShoppingSearches[key] = nil
+end
+
+function private.GetSavedShoppingSearches()
+	private.addonSettings = private.addonSettings or TSM.LibTSMApp:Include("Service.AddonSettings")
+	return private.addonSettings.GetDB():Get("global", nil, "userData", "savedShoppingSearches")
+end
 
 
 

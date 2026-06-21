@@ -84,9 +84,11 @@ local STATE_SCHEMA = Reactive.CreateStateSchema("AUCTION_BUY_SCAN_STATE")
 ---@param scanTypeName string The name of the type of scan to use for locking
 ---@param isPlayerFunc fun(characterName: string, includeAlts: boolean): boolean Function which checks if a character belongs to the player
 ---@param alertThresholdFunc fun(itemString: string): number Function to get the confirmation alert threshold for an item
+---@param postUndercutFunc fun(itemString: string): number Function to get the post buyout undercut amount
+---@param postBidUndercutFunc fun(itemString: string, itemDisplayedBid: number, itemBuyout: number, buyoutUndercut: number): number Function to get the post bid undercut amount
 ---@return AuctionBuyScan
-function AuctionBuyScan.__static.NewBrose(scanTypeName, isPlayerFunc, alertThresholdFunc)
-	return AuctionBuyScan(SCAN_TYPE.BROWSE, scanTypeName, isPlayerFunc, alertThresholdFunc)
+function AuctionBuyScan.__static.NewBrose(scanTypeName, isPlayerFunc, alertThresholdFunc, postUndercutFunc, postBidUndercutFunc)
+	return AuctionBuyScan(SCAN_TYPE.BROWSE, scanTypeName, isPlayerFunc, alertThresholdFunc, postUndercutFunc, postBidUndercutFunc)
 end
 
 ---Creates a new auction buy scan object for a sniper scan.
@@ -103,9 +105,11 @@ end
 -- Class Meta Methods
 -- ============================================================================
 
-function AuctionBuyScan.__private:__init(scanType, scanTypeName, isPlayerFunc, alertThresholdFunc)
+function AuctionBuyScan.__private:__init(scanType, scanTypeName, isPlayerFunc, alertThresholdFunc, postUndercutFunc, postBidUndercutFunc)
 	self._isPlayerFunc = isPlayerFunc ---@type fun(characterName: string, includeAlts: boolean): boolean
 	self._alertThresholdFunc = alertThresholdFunc
+	self._postUndercutFunc = postUndercutFunc
+	self._postBidUndercutFunc = postBidUndercutFunc
 
 	local state = STATE_SCHEMA:CreateState()
 	state.scanType = scanType
@@ -750,9 +754,10 @@ function AuctionBuyScan.__private:_ActionHandler(manager, state, action, ...)
 			return
 		end
 
-		local undercut = LibTSMUI.IsRetail() and 0 or 1
-		local bid = itemDisplayedBid - undercut
-		local buyout = itemBuyout - undercut
+		local buyoutUndercut = self._postUndercutFunc and self._postUndercutFunc(itemString) or (LibTSMUI.IsRetail() and 0 or 1)
+		local bidUndercut = self._postBidUndercutFunc and self._postBidUndercutFunc(itemString, itemDisplayedBid, itemBuyout, buyoutUndercut) or buyoutUndercut
+		local bid = itemDisplayedBid - bidUndercut
+		local buyout = itemBuyout - buyoutUndercut
 		if LibTSMUI.IsRetail() then
 			bid = Math.Round(bid, COPPER_PER_SILVER)
 			buyout = Math.Round(buyout, COPPER_PER_SILVER)
@@ -763,7 +768,7 @@ function AuctionBuyScan.__private:_ActionHandler(manager, state, action, ...)
 		state.auctionScrollTable:GetBaseElement():ShowDialogFrame(UIElements.New("ShoppingPostDialog", "dialog")
 			:SetSize(326, LibTSMUI.IsModernAuctionHouse() and 344 or 380)
 			:AddAnchor("CENTER")
-			:SetAuction(itemString, bid, buyout, quantity, undercut, state.postDuration)
+			:SetAuction(itemString, bid, buyout, quantity, bidUndercut, buyoutUndercut, state.postDuration)
 			:SetManager(manager)
 			:SetAction("OnPostClicked", "ACTION_POST_AUCTION_CONFIRMED")
 			:SetScript("OnHide", manager:CallbackToProcessAction("ACTION_HANDLE_POST_DIALOG_HIDDEN"))

@@ -142,8 +142,12 @@ function private.EventHandler(_, event, ...)
 	local context = TempTable.Acquire(event, ...)
 	if private.processingEvent then
 		-- We are already in the middle of processing another event, so queue this one up
-		tinsert(private.eventQueue, context)
-		assert(#private.eventQueue < 50)
+		if #private.eventQueue < 50 then
+			tinsert(private.eventQueue, context)
+		else
+			Log.Warn("Dropping nested event (%s) due to event queue overflow", event)
+			TempTable.Release(context)
+		end
 		return
 	end
 	private.processingEvent = true
