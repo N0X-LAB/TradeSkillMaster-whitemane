@@ -41,6 +41,7 @@ function MarketTrap.OnInitialize(settingsDB)
 		:AddKey("global", "marketTrapOptions", "minScore")
 		:AddKey("global", "marketTrapOptions", "maxCandidates")
 		:AddKey("global", "marketTrapOptions", "trapPostQuantity")
+		:AddKey("global", "marketTrapOptions", "showBelowMinScore")
 		:AddKey("global", "marketTrapOptions", "ignoreNoSaleData")
 		:AddKey("global", "marketTrapOptions", "requireConfirmation")
 end
@@ -57,12 +58,13 @@ function MarketTrap.BuildCandidate(row)
 	if not row then
 		return nil, L["Select an auction first."]
 	end
-	local itemString = row:GetItemString() or row:GetBaseItemString()
+	local success, itemString, quantity, numAuctions, buyout, itemBuyout = pcall(private.GetRowInfo, row)
+	if not success then
+		return nil, L["The selected auction is no longer available. Select it again after the scan updates."]
+	end
 	if not itemString then
 		return nil, L["The selected auction does not have item information yet."]
 	end
-	local quantity, numAuctions = row:GetQuantities()
-	local buyout, itemBuyout = row:GetBuyouts()
 	local targetPrice = private.GetTargetPrice(itemString)
 	if not quantity or not numAuctions or not itemBuyout then
 		return nil, L["The selected auction does not have complete pricing data yet."]
@@ -127,11 +129,32 @@ function MarketTrap.GetPostQuantity(_, defaultQuantity)
 	return Math.Bound(private.settings.trapPostQuantity, 1, defaultQuantity or 1)
 end
 
+function MarketTrap.GetRowScore(row)
+	local candidate = MarketTrap.BuildCandidate(row)
+	return candidate and candidate.score or nil
+end
+
+function MarketTrap.ShouldShowRow(row)
+	local candidate = MarketTrap.BuildCandidate(row)
+	if not candidate then
+		return false
+	end
+	return private.settings.showBelowMinScore or candidate.score >= private.settings.minScore
+end
+
 
 
 -- ============================================================================
 -- Private Helper Functions
 -- ============================================================================
+
+function private.GetRowInfo(row)
+	local itemString = row:GetItemString() or row:GetBaseItemString()
+	local quantity, numAuctions = row:GetQuantities()
+	local buyout, itemBuyout, minPrice = row:GetBuyouts()
+	itemBuyout = itemBuyout or minPrice
+	return itemString, quantity, numAuctions, buyout, itemBuyout
+end
 
 function private.GetTargetPrice(itemString)
 	local value = CustomPrice.GetValue(private.settings.targetPrice, itemString)

@@ -42,6 +42,11 @@ local COL_INFO = {
 		justifyH = "RIGHT",
 		font = "TABLE_TABLE1",
 	},
+	score = {
+		title = L["Score"],
+		justifyH = "RIGHT",
+		font = "TABLE_TABLE1",
+	},
 	qty = LibTSMUI.IsRetail() and {
 		title = L["Qty"],
 		justifyH = "RIGHT",
@@ -120,6 +125,8 @@ function AuctionScrollTable:__init(colInfo)
 	self._data.baseItemString = {}
 	self._auctionScan = nil
 	self._marketValueFunc = nil
+	self._rowScoreFunc = nil
+	self._rowFilterFunc = nil
 	self._isPlayerFunc = nil
 	self._expanded = {}
 	self._rawData = {} ---@type AuctionRow|AuctionSubRow[]
@@ -208,6 +215,28 @@ end
 function AuctionScrollTable:SetMarketValueFunction(func)
 	if func ~= self._marketValueFunc then
 		self._marketValueFunc = func
+		self:_UpdateData()
+	end
+	return self
+end
+
+---Sets the function used to score a row.
+---@param func fun(row: AuctionRow|AuctionSubRow): number? The function
+---@return AuctionScrollTable
+function AuctionScrollTable:SetRowScoreFunction(func)
+	if func ~= self._rowScoreFunc then
+		self._rowScoreFunc = func
+		self:_UpdateData()
+	end
+	return self
+end
+
+---Sets the function used to filter rows.
+---@param func fun(row: AuctionRow|AuctionSubRow): boolean The function
+---@return AuctionScrollTable
+function AuctionScrollTable:SetRowFilterFunction(func)
+	if func ~= self._rowFilterFunc then
+		self._rowFilterFunc = func
 		self:_UpdateData()
 	end
 	return self
@@ -313,9 +342,11 @@ function AuctionScrollTable.__protected:_UpdateData(_, _, updatedRow)
 			if not self._rowByItem[baseItemString] and row:HasItemInfo() then
 				local hasSubRows = false
 				for _, subRow in row:SubRowIterator() do
-					hasSubRows = true
-					private.subRowSortValueTemp[subRow] = self:_GetSortValue(subRow, sortKey, sortAscending)
-					tinsert(private.subRowsTemp, subRow)
+					if self:_ShouldShowRow(subRow) then
+						hasSubRows = true
+						private.subRowSortValueTemp[subRow] = self:_GetSortValue(subRow, sortKey, sortAscending)
+						tinsert(private.subRowsTemp, subRow)
+					end
 				end
 				if hasSubRows then
 					-- Sort all the subRows
@@ -331,7 +362,7 @@ function AuctionScrollTable.__protected:_UpdateData(_, _, updatedRow)
 					subRowsEnd[baseItemString] = #subRows
 					self._rowByItem[baseItemString] = row
 					tinsert(rows, row)
-				elseif self._browseResultsVisible then
+				elseif self._browseResultsVisible and self:_ShouldShowRow(row) then
 					rowSortValue[row] = self:_GetSortValue(row, sortKey, sortAscending)
 					self._rowByItem[baseItemString] = row
 					tinsert(rows, row)
@@ -392,6 +423,9 @@ end
 ---@param updatedRow AuctionRow
 function AuctionScrollTable.__protected:_HandleUpdatedAuctionRow(updatedRow)
 	assert(not updatedRow:IsSubRow())
+	if self._rowFilterFunc then
+		return false
+	end
 	local baseItemString = updatedRow:GetBaseItemString()
 	local rowDataIndex = Table.KeyByValue(self._rawData, updatedRow)
 	if self._rowByItem[baseItemString] ~= updatedRow then
@@ -656,6 +690,8 @@ function AuctionScrollTable.__protected:_SetDataForRow(index, row, isFirstSubRow
 	itemBuyout = itemBuyout or minItemBuyout
 	self._data.itemBuyout[index] = itemBuyout and Money.ToStringForAH(itemBuyout) or ""
 	self._data.buyout[index] = buyout and Money.ToStringForAH(buyout) or ""
+	local score = self:_GetRowScore(row)
+	self._data.score[index] = score and Math.Round(score) or ""
 	local pct, bidPct = self:_GetMarketValuePct(row)
 	pct = pct and Math.Round(pct * 100) or nil
 	bidPct = bidPct and Math.Round(bidPct * 100) or nil
@@ -833,6 +869,8 @@ function AuctionScrollTable.__protected:_GetSortValue(row, id, isAscending)
 		return ItemInfo.GetName(baseItemString)
 	elseif id == "ilvl" then
 		return ItemInfo.GetItemLevel(row:GetItemString() or row:GetBaseItemString())
+	elseif id == "score" then
+		return self:_GetRowScore(row) or (isAscending and math.huge or -math.huge)
 	elseif id == "posts" then
 		local _, numAuctions = row:GetQuantities()
 		return numAuctions or (isAscending and math.huge or -math.huge)
@@ -885,6 +923,24 @@ function AuctionScrollTable.__protected:_GetSortValue(row, id, isAscending)
 	else
 		error("Invalid sort col id: "..tostring(id))
 	end
+end
+
+---@param row AuctionRow|AuctionSubRow
+function AuctionScrollTable.__private:_GetRowScore(row)
+	if not self._rowScoreFunc then
+		return nil
+	end
+	local success, result = pcall(self._rowScoreFunc, row)
+	return success and result or nil
+end
+
+---@param row AuctionRow|AuctionSubRow
+function AuctionScrollTable.__private:_ShouldShowRow(row)
+	if not self._rowFilterFunc then
+		return true
+	end
+	local success, result = pcall(self._rowFilterFunc, row)
+	return success and result and true or false
 end
 
 ---@param row AuctionRow|AuctionSubRow

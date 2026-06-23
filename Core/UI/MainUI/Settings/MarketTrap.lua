@@ -23,6 +23,7 @@ local SETTING_TOOLTIPS = {
 	minScore = L["The minimum Market Trap score required for controlled execute."],
 	maxCandidates = L["The maximum number of candidates to review from a discovery scan."],
 	trapPostQuantity = L["The number of items to post when reposting a Market Trap candidate."],
+	showBelowMinScore = L["If enabled, Discovery Scan will show candidates even when their score is below the minimum score."],
 	ignoreNoSaleData = L["If enabled, Market Trap will reject candidates when required sale data is missing."],
 	requireConfirmation = L["If enabled, Market Trap keeps controlled execute actions behind the normal TSM and Auction House confirmation flow."],
 }
@@ -45,6 +46,7 @@ function MarketTrap.OnInitialize(settingsDB)
 		:AddKey("global", "marketTrapOptions", "minScore")
 		:AddKey("global", "marketTrapOptions", "maxCandidates")
 		:AddKey("global", "marketTrapOptions", "trapPostQuantity")
+		:AddKey("global", "marketTrapOptions", "showBelowMinScore")
 		:AddKey("global", "marketTrapOptions", "ignoreNoSaleData")
 		:AddKey("global", "marketTrapOptions", "requireConfirmation")
 
@@ -73,6 +75,7 @@ function private.GetMarketTrapSettingsFrame()
 			:AddChild(TSM.MainUI.Settings.CreateInputWithReset("targetPrice", L["Target repost price"], private.settings, "targetPrice", nil, nil, SETTING_TOOLTIPS.targetPrice)
 				:SetMargin(0, 0, 0, 12)
 			)
+			:AddChild(private.CreateCheckbox("showBelowMinScore", L["Show results below minimum score"], SETTING_TOOLTIPS.showBelowMinScore))
 		)
 		:AddChild(TSM.MainUI.Settings.CreateExpandableSection("MarketTrap", "execute", L["Controlled Execute"], L["Controls Market Trap spend limits and execution safeguards."])
 			:AddChild(TSM.MainUI.Settings.CreateInputWithReset("maxSpendPerItem", L["Maximum spend per item"], private.settings, "maxSpendPerItem", nil, nil, SETTING_TOOLTIPS.maxSpendPerItem)
