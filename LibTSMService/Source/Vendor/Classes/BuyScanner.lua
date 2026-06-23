@@ -35,6 +35,7 @@ BuyScanner:OnModuleLoad(function()
 	private.db = Database.NewSchema("VENDOR_ITEMS")
 		:AddUniqueNumberField("index")
 		:AddStringField("itemString")
+		:AddStringField("name")
 		:AddSmartMapField("baseItemString", ItemString.GetBaseMap(), "itemString")
 		:AddNumberField("price")
 		:AddStringListField("costItems")
@@ -184,7 +185,7 @@ function private.UpdateMerchantDB()
 	for i = 1, Merchant.GetNumItems() do
 		local itemString = ItemString.Get(Merchant.GetItemLink(i))
 		if itemString then
-			local price, stackSize, numAvailable = Merchant.GetItemInfo(i)
+			local name, price, stackSize, numAvailable = Merchant.GetItemInfo(i)
 			assert(#private.costItemTemp == 0 and #private.costQuantityTemp == 0)
 			for j = 1, Merchant.GetNumCostItems(i) do
 				local costItemLink, costNum = Merchant.GetCostItemInfo(i, j)
@@ -197,7 +198,7 @@ function private.UpdateMerchantDB()
 					tinsert(private.costQuantityTemp, costNum)
 				end
 			end
-			private.db:BulkInsertNewRow(i, itemString, price, private.costItemTemp, private.costQuantityTemp, stackSize, numAvailable)
+			private.db:BulkInsertNewRow(i, itemString, name or "", price, private.costItemTemp, private.costQuantityTemp, stackSize, numAvailable)
 			wipe(private.costItemTemp)
 			wipe(private.costQuantityTemp)
 		end

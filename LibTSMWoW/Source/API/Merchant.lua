@@ -35,12 +35,13 @@ end
 
 ---Gets info about a merchant item.
 ---@param index number The index
+---@return string? name
 ---@return number price
 ---@return number stackSize
 ---@return number numAvailable
 function Merchant.GetItemInfo(index)
-	local _, _, price, stackSize, numAvailable = GetMerchantItemInfo(index)
-	return price, stackSize, numAvailable
+	local name, _, price, stackSize, numAvailable = GetMerchantItemInfo(index)
+	return name, price, stackSize, numAvailable
 end
 
 ---Gets the max stack size that can be bought of an item.

@@ -120,9 +120,9 @@ function VendorBuyScrollTable.__private:_HandleQueryUpdate()
 	end
 	wipe(self._createGroupsData)
 	for _, row in self._query:Iterator() do
-		local stackSize, itemString, numAvailable, itemLevel, index = row:GetFields("stackSize", "itemString", "numAvailable", "itemLevel", "index")
+		local stackSize, itemString, name, numAvailable, itemLevel, index = row:GetFields("stackSize", "itemString", "name", "numAvailable", "itemLevel", "index")
 		tinsert(self._data.qty, stackSize)
-		local itemText = "|T"..ItemInfo.GetTexture(itemString)..":0|t "..(UIUtils.GetDisplayItemName(itemString) or "?")
+		local itemText = "|T"..ItemInfo.GetTexture(itemString)..":24|t "..(UIUtils.GetDisplayItemName(itemString) or name ~= "" and name or "?")
 		if numAvailable > 0 then
 			itemText = itemText..Theme.GetColor("FEEDBACK_RED"):ColorText(" ("..numAvailable..")")
 		elseif numAvailable ~= -1 then

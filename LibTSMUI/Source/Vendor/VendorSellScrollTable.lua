@@ -127,7 +127,7 @@ function VendorSellScrollTable.__private:_HandleQueryUpdate()
 	wipe(self._createGroupsData)
 	for _, row in self._query:Iterator() do
 		local itemString, vendorSell, potentialValue = row:GetFields("itemString", "vendorSell", "potentialValue")
-		tinsert(self._data.item, "|T"..ItemInfo.GetTexture(itemString)..":0|t "..(UIUtils.GetDisplayItemName(itemString) or "?"))
+		tinsert(self._data.item, "|T"..ItemInfo.GetTexture(itemString)..":24|t "..(UIUtils.GetDisplayItemName(itemString) or "?"))
 		tinsert(self._data.item_tooltip, itemString)
 		tinsert(self._data.vendorSell, vendorSell > 0 and Money.ToStringForUI(vendorSell) or "")
 		tinsert(self._data.potential, Money.ToStringForUI(potentialValue))
