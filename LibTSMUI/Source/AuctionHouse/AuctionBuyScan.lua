@@ -517,10 +517,12 @@ function AuctionBuyScan.__private:_ActionHandler(manager, state, action, ...)
 		local postContext = self:_GetPostContext()
 		state.selectionCanPost = postContext and postContext:CanPost() or false
 	elseif action == "ACTION_FIND_SELECTED_AUCTION" then
+		if not state.selectedAuction or not state.selectedAuction:IsSubRow() then
+			return
+		end
 		if not AuctionScan.AcquireLock(state.scanTypeName) then
 			return
 		end
-		assert(state.selectedAuction and state.selectedAuction:IsSubRow())
 		state.findHash = state.selectedAuction:GetHashes()
 		state.findHashIsSelection = true
 		state.findResult = nil
@@ -528,8 +530,7 @@ function AuctionBuyScan.__private:_ActionHandler(manager, state, action, ...)
 	elseif action == "ACTION_HANDLE_FIND_RESULT" then
 		local result = ...
 		AuctionScan.ReleaseLock(state.scanTypeName)
-		if not state.selectedAuction then
-			assert(not state.selectedAuction)
+		if not state.selectedAuction or not state.selectedAuction:IsSubRow() then
 			return
 		end
 		-- Update the selection in case the result rows changed
@@ -584,7 +585,7 @@ function AuctionBuyScan.__private:_ActionHandler(manager, state, action, ...)
 			return
 		end
 		local oldAuctionId, newAuctionId, newResultInfo = ...
-		if not state.selectedAuction or select(2, state.selectedAuction:GetListingInfo()) ~= oldAuctionId then
+		if not state.selectedAuction or not state.selectedAuction:IsSubRow() or select(2, state.selectedAuction:GetListingInfo()) ~= oldAuctionId then
 			return
 		end
 		state.selectedAuction:UpdateResultInfo(newAuctionId, newResultInfo)
