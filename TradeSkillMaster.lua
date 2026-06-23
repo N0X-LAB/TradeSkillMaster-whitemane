@@ -31,8 +31,8 @@ local private = {
 	localPriceScanTemp = {},
 }
 local LOCAL_PRICE_DATA_VERSION = 1
-local MARKET_VALUE_OLD_WEIGHT = 0.8
-local MARKET_VALUE_NEW_WEIGHT = 0.2
+local MARKET_VALUE_OLD_WEIGHT = 0.95
+local MARKET_VALUE_NEW_WEIGHT = 0.05
 local MARKET_VALUE_MIN_BUYOUT_CAP = 3
 do
 	-- Basic module configuration
