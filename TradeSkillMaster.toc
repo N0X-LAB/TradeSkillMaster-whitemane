@@ -128,6 +128,7 @@ Core\Service\Shopping\GreatDealsSearch.lua
 Core\Service\Shopping\GroupSearch.lua
 Core\Service\Shopping\SavedSearches.lua
 Core\Service\Shopping\VendorSearch.lua
+Core\Service\MarketTrap\Core.lua
 
 # UI files (depend on main addon file being loaded)
 Core\UI\UI.lua
@@ -143,6 +144,7 @@ Core\UI\AuctionUI\Core.lua
 Core\UI\AuctionUI\Shopping.lua
 Core\UI\AuctionUI\Auctioning.lua
 Core\UI\AuctionUI\Sniper.lua
+Core\UI\AuctionUI\MarketTrap.lua
 Core\UI\AuctionUI\MyAuctions.lua
 
 Core\UI\DestroyingUI\Core.lua
@@ -200,6 +202,7 @@ Core\UI\MainUI\Settings\CustomSources.lua
 Core\UI\MainUI\Settings\Crafting.lua
 Core\UI\MainUI\Settings\Macros.lua
 Core\UI\MainUI\Settings\Shopping.lua
+Core\UI\MainUI\Settings\MarketTrap.lua
 Core\UI\MainUI\Settings\Vendoring.lua
 Core\UI\MainUI\Settings\Tooltip.lua
 

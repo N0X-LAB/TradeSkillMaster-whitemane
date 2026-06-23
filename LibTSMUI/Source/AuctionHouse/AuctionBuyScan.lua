@@ -86,9 +86,10 @@ local STATE_SCHEMA = Reactive.CreateStateSchema("AUCTION_BUY_SCAN_STATE")
 ---@param alertThresholdFunc fun(itemString: string): number Function to get the confirmation alert threshold for an item
 ---@param postUndercutFunc fun(itemString: string): number Function to get the post buyout undercut amount
 ---@param postBidUndercutFunc fun(itemString: string, itemDisplayedBid: number, itemBuyout: number, buyoutUndercut: number): number Function to get the post bid undercut amount
+---@param postQuantityFunc fun(itemString: string, defaultQuantity: number): number Function to get the post quantity
 ---@return AuctionBuyScan
-function AuctionBuyScan.__static.NewBrose(scanTypeName, isPlayerFunc, alertThresholdFunc, postUndercutFunc, postBidUndercutFunc)
-	return AuctionBuyScan(SCAN_TYPE.BROWSE, scanTypeName, isPlayerFunc, alertThresholdFunc, postUndercutFunc, postBidUndercutFunc)
+function AuctionBuyScan.__static.NewBrose(scanTypeName, isPlayerFunc, alertThresholdFunc, postUndercutFunc, postBidUndercutFunc, postQuantityFunc)
+	return AuctionBuyScan(SCAN_TYPE.BROWSE, scanTypeName, isPlayerFunc, alertThresholdFunc, postUndercutFunc, postBidUndercutFunc, postQuantityFunc)
 end
 
 ---Creates a new auction buy scan object for a sniper scan.
@@ -105,11 +106,12 @@ end
 -- Class Meta Methods
 -- ============================================================================
 
-function AuctionBuyScan.__private:__init(scanType, scanTypeName, isPlayerFunc, alertThresholdFunc, postUndercutFunc, postBidUndercutFunc)
+function AuctionBuyScan.__private:__init(scanType, scanTypeName, isPlayerFunc, alertThresholdFunc, postUndercutFunc, postBidUndercutFunc, postQuantityFunc)
 	self._isPlayerFunc = isPlayerFunc ---@type fun(characterName: string, includeAlts: boolean): boolean
 	self._alertThresholdFunc = alertThresholdFunc
 	self._postUndercutFunc = postUndercutFunc
 	self._postBidUndercutFunc = postBidUndercutFunc
+	self._postQuantityFunc = postQuantityFunc
 
 	local state = STATE_SCHEMA:CreateState()
 	state.scanType = scanType
@@ -753,6 +755,9 @@ function AuctionBuyScan.__private:_ActionHandler(manager, state, action, ...)
 		if not itemString then
 			-- Should never get here
 			return
+		end
+		if self._postQuantityFunc then
+			quantity = self._postQuantityFunc(itemString, quantity)
 		end
 
 		local buyoutUndercut = self._postUndercutFunc and self._postUndercutFunc(itemString) or (LibTSMUI.IsRetail() and 0 or 1)
