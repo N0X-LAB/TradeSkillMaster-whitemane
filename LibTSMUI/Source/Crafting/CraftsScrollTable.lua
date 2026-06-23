@@ -13,6 +13,7 @@ local Theme = LibTSMUI:From("LibTSMService"):Include("UI.Theme")
 local Group = LibTSMUI:From("LibTSMTypes"):Include("Group")
 local Math = LibTSMUI:From("LibTSMUtil"):Include("Lua.Math")
 local Money = LibTSMUI:From("LibTSMUtil"):Include("UI.Money")
+local private = {}
 local COL_INFO = {
 	queued = {
 		titleIcon = "iconPack.18x18/Queue",
@@ -39,6 +40,12 @@ local COL_INFO = {
 		justifyH = "RIGHT",
 		font = "TABLE_TABLE1",
 		sortField = "bagQuantity",
+	},
+	bank = {
+		title = L["Bank"],
+		justifyH = "RIGHT",
+		font = "TABLE_TABLE1",
+		sortField = "bankQuantity",
 	},
 	ah = {
 		title = L["AH"],
@@ -109,6 +116,16 @@ function CraftsScrollTable:Release()
 	end
 end
 
+---Sets the settings used to persist the table layout.
+---@param settings SettingsView The settings object
+---@param key string The settings key
+---@return CraftsScrollTable
+function CraftsScrollTable:SetSettings(settings, key)
+	private.InsertBankColumn(settings[key])
+	self.__super:SetSettings(settings, key)
+	return self
+end
+
 ---Sets the query used to populate the table.
 ---@param query DatabaseQuery The query object
 ---@return CraftsScrollTable
@@ -171,6 +188,22 @@ end
 -- Protected/Private Class Methods
 -- ============================================================================
 
+function private.InsertBankColumn(settingsValue)
+	local hasBankCol = nil
+	local bagsIndex = nil
+	for i, colInfo in ipairs(settingsValue.cols) do
+		if colInfo.id == "bank" then
+			hasBankCol = true
+			break
+		elseif colInfo.id == "bags" then
+			bagsIndex = i
+		end
+	end
+	if not hasBankCol then
+		tinsert(settingsValue.cols, (bagsIndex or 0) + 1, { id = "bank", width = 34, hidden = nil })
+	end
+end
+
 function CraftsScrollTable.__private:_HandleQueryUpdate()
 	-- TODO: Optimize this using diffs
 	for _, tbl in pairs(self._data) do
@@ -178,12 +211,13 @@ function CraftsScrollTable.__private:_HandleQueryUpdate()
 	end
 	wipe(self._createGroupsData)
 	for _, row in self._query:Iterator() do
-		local num, itemString, name, firstOperation, bagQuantity, auctionQuantity, profession = row:GetFields("num", "itemString", "name", "firstOperation", "bagQuantity", "auctionQuantity", "profession")
+		local num, itemString, name, firstOperation, bagQuantity, bankQuantity, auctionQuantity, profession = row:GetFields("num", "itemString", "name", "firstOperation", "bagQuantity", "bankQuantity", "auctionQuantity", "profession")
 		tinsert(self._data.queued, num)
 		tinsert(self._data.craftName, "|T"..ItemInfo.GetTexture(itemString)..":0|t "..(UIUtils.GetDisplayItemName(itemString) or name))
 		tinsert(self._data.craftName_tooltip, itemString)
 		tinsert(self._data.operation, firstOperation)
 		tinsert(self._data.bags, bagQuantity or "0")
+		tinsert(self._data.bank, bankQuantity or "0")
 		tinsert(self._data.ah, auctionQuantity or "0")
 		tinsert(self._data.craftingCost, self.DEFERRED_DATA)
 		tinsert(self._data.itemValue, self.DEFERRED_DATA)
