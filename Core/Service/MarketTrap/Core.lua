@@ -58,12 +58,15 @@ function MarketTrap.BuildCandidate(row)
 	if not row then
 		return nil, L["Select an auction first."]
 	end
-	local success, itemString, quantity, numAuctions, buyout, itemBuyout = pcall(private.GetRowInfo, row)
+	local success, itemString, quantity, numAuctions, buyout, itemBuyout, isCommodity = pcall(private.GetRowInfo, row)
 	if not success then
 		return nil, L["The selected auction is no longer available. Select it again after the scan updates."]
 	end
 	if not itemString then
 		return nil, L["The selected auction does not have item information yet."]
+	end
+	if not isCommodity then
+		return nil, L["Market Trap only supports commodities."]
 	end
 	local targetPrice = private.GetTargetPrice(itemString)
 	if not quantity or not numAuctions or not itemBuyout then
@@ -153,7 +156,7 @@ function private.GetRowInfo(row)
 	local quantity, numAuctions = row:GetQuantities()
 	local buyout, itemBuyout, minPrice = row:GetBuyouts()
 	itemBuyout = itemBuyout or minPrice
-	return itemString, quantity, numAuctions, buyout, itemBuyout
+	return itemString, quantity, numAuctions, buyout, itemBuyout, row:IsCommodity()
 end
 
 function private.GetTargetPrice(itemString)
