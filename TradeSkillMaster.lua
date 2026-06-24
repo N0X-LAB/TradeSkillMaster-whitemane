@@ -31,9 +31,13 @@ local private = {
 	localPriceScanTemp = {},
 }
 local LOCAL_PRICE_DATA_VERSION = 1
-local MARKET_VALUE_OLD_WEIGHT = 0.95
-local MARKET_VALUE_NEW_WEIGHT = 0.05
 local MARKET_VALUE_MIN_BUYOUT_CAP = 3
+local MARKET_VALUE_HALF_LIFE = 24 * 60 * 60
+local MARKET_VALUE_MAX_WEIGHT = 0.05
+local MARKET_VALUE_SPIKE_THRESHOLD = 2
+local MARKET_VALUE_SPIKE_WEIGHT_MOD = 0.25
+local MARKET_VALUE_DIP_THRESHOLD = 0.5
+local MARKET_VALUE_DIP_WEIGHT_MOD = 0.5
 do
 	-- Basic module configuration
 	Log.SetLoggingToChatEnabled(TSM.LibTSMUtil.IsTestVersion())
@@ -328,6 +332,23 @@ function private.GetLocalPrice(itemString, key)
 	return data and data[key] or nil
 end
 
+function private.CalculateLocalMarketValue(oldMarketValue, oldUpdateTime, scanMarketValue, updateTime)
+	if not oldMarketValue or oldMarketValue <= 0 or not oldUpdateTime then
+		return floor(scanMarketValue + 0.5)
+	end
+
+	local elapsed = max(updateTime - oldUpdateTime, 0)
+	local weight = 1 - (0.5 ^ (elapsed / MARKET_VALUE_HALF_LIFE))
+	weight = min(weight, MARKET_VALUE_MAX_WEIGHT)
+	if scanMarketValue > oldMarketValue * MARKET_VALUE_SPIKE_THRESHOLD then
+		weight = weight * MARKET_VALUE_SPIKE_WEIGHT_MOD
+	elseif scanMarketValue < oldMarketValue * MARKET_VALUE_DIP_THRESHOLD then
+		weight = weight * MARKET_VALUE_DIP_WEIGHT_MOD
+	end
+
+	return floor((oldMarketValue * (1 - weight) + scanMarketValue * weight) + 0.5)
+end
+
 function private.AuctionScanQueryDone(_, query)
 	wipe(private.localPriceScanTemp)
 	for _, row in query:BrowseResultsIterator() do
@@ -363,7 +384,7 @@ function private.AuctionScanQueryDone(_, query)
 			localPriceData.items[itemString] = data
 		end
 		data.minBuyout = scanData.minBuyout
-		data.marketValue = floor((data.marketValue and (data.marketValue * MARKET_VALUE_OLD_WEIGHT + scanMarketValue * MARKET_VALUE_NEW_WEIGHT) or scanMarketValue) + 0.5)
+		data.marketValue = private.CalculateLocalMarketValue(data.marketValue, data.updateTime, scanMarketValue, updateTime)
 		data.updateTime = updateTime
 		didUpdate = true
 	end

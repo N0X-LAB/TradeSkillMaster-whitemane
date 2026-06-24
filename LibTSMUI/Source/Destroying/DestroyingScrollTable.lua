@@ -113,7 +113,13 @@ function DestroyingScrollTable.__private:_SetSelectedSlot(slotId)
 		if newRow then
 			newRow:SetSelected(true)
 		end
-		self._selectionItemString = self._query:GetNthResult(dataIndex):GetField("itemString")
+		local dbRow = self._query:GetNthResult(dataIndex)
+		if not dbRow then
+			self._selectionItemString = nil
+			self._selectionSlotId = nil
+			return
+		end
+		self._selectionItemString = dbRow:GetField("itemString")
 		self._selectionSlotId = slotId
 		self:_ScrollToRow(dataIndex)
 	else
@@ -188,6 +194,10 @@ function DestroyingScrollTable.__private:_HandleActionIconClick(mouseButton, dat
 	if mouseButton ~= "LeftButton" then
 		return
 	end
-	local itemString = self._query:GetNthResult(dataIndex):GetField("itemString")
+	local dbRow = self._query:GetNthResult(dataIndex)
+	if not dbRow then
+		return
+	end
+	local itemString = dbRow:GetField("itemString")
 	self:_SendActionScript("OnHideIconClick", itemString, IsShiftKeyDown())
 end

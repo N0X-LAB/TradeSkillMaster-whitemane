@@ -21,6 +21,7 @@ local Money = LibTSMUI:From("LibTSMUtil"):Include("UI.Money")
 local private = {
 	subRowsTemp = {}, ---@type AuctionSubRow[]
 	subRowSortValueTemp = {},
+	vendorTemp = {},
 }
 local SUB_ROW_TINT_PCT = -20
 local INDENT_WIDTH = 8
@@ -690,8 +691,10 @@ function AuctionScrollTable.__protected:_SetDataForRow(index, row, isFirstSubRow
 	itemBuyout = itemBuyout or minItemBuyout
 	self._data.itemBuyout[index] = itemBuyout and Money.ToStringForAH(itemBuyout) or ""
 	self._data.buyout[index] = buyout and Money.ToStringForAH(buyout) or ""
-	local score = self:_GetRowScore(row)
-	self._data.score[index] = score and Math.Round(score) or ""
+	if self._data.score then
+		local score = self:_GetRowScore(row)
+		self._data.score[index] = score and Math.Round(score) or ""
+	end
 	local pct, bidPct = self:_GetMarketValuePct(row)
 	pct = pct and Math.Round(pct * 100) or nil
 	bidPct = bidPct and Math.Round(bidPct * 100) or nil
@@ -943,6 +946,31 @@ function AuctionScrollTable.__private:_ShouldShowRow(row)
 	return success and result and true or false
 end
 
+function private.GetSubRowStats(resultRow)
+	assert(not next(private.vendorTemp))
+	local totalQuantity = 0
+	for _, subRow in resultRow:SubRowIterator() do
+		local quantity, numAuctions = subRow:GetQuantities()
+		totalQuantity = totalQuantity + (quantity or 0) * (numAuctions or 1)
+		local ownerStr = subRow:GetOwnerInfo()
+		if ownerStr and ownerStr ~= "" then
+			private.vendorTemp[ownerStr] = true
+		end
+	end
+	local numVendors = Table.Count(private.vendorTemp)
+	wipe(private.vendorTemp)
+	return numVendors, totalQuantity
+end
+
+function private.GetSubRowStatsText(numSubRows, numVendors, totalQuantity)
+	local numSubRowsText = numSubRows > 999 and "999+" or tostring(numSubRows)
+	local numberColor = Theme.GetColor("TEXT")
+	local labelColor = Theme.GetColor("ACTIVE_BG_ALT")
+	return numberColor:ColorText(numSubRowsText)..labelColor:ColorText(" SubRows | ")..
+		numberColor:ColorText(tostring(numVendors))..labelColor:ColorText(" Vendors | ")..
+		numberColor:ColorText(tostring(totalQuantity))..labelColor:ColorText(" Items")
+end
+
 ---@param row AuctionRow|AuctionSubRow
 function AuctionScrollTable.__private:_GetMarketValuePct(row)
 	if not self._marketValueFunc then
@@ -1051,7 +1079,7 @@ function AuctionScrollTable.__protected:_HandleRowAcquired(row)
 	local badge = row:AddText("badge")
 	badge:SetJustifyH("RIGHT")
 	badge:TSMSetFont("TABLE_TABLE1")
-	badge:TSMSubscribeTextColor("INDICATOR")
+	badge:TSMSubscribeTextColor("ACTIVE_BG_ALT")
 	badge:SetHeight(item:GetHeight())
 	badge:SetPoint("LEFT", item, "RIGHT", ICON_SPACING, 0)
 end
@@ -1087,7 +1115,8 @@ function AuctionScrollTable.__protected:_HandleRowDraw(row)
 
 	if not isExpanded and numSubRows > 1 then
 		badge:Show()
-		badge:SetText(numSubRows > 999 and "(999+)" or "("..numSubRows..")")
+		local numVendors, totalQuantity = private.GetSubRowStats(data:GetResultRow())
+		badge:SetText(private.GetSubRowStatsText(numSubRows, numVendors, totalQuantity))
 		badge:SetPoint("LEFT", text, "RIGHT", ICON_SPACING, 0)
 		local width = badge:GetUnboundedStringWidth()
 		badge:SetWidth(width)
