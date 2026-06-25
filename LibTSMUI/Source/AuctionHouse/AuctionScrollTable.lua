@@ -1152,7 +1152,7 @@ function AuctionScrollTable.__protected:_HandleRowDraw(row)
 
 	self:_DrawRunningIcon(row)
 
-	if not isExpanded and numSubRows > 1 then
+	if not isExpanded and numSubRows > 0 then
 		badge:Show()
 		local numVendors, totalQuantity = private.GetSubRowStats(data:GetResultRow())
 		badge:SetText(private.GetSubRowStatsText(numSubRows, numVendors, totalQuantity))

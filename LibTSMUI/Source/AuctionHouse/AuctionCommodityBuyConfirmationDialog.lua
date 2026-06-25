@@ -409,7 +409,6 @@ function AuctionCommodityBuyConfirmationDialog.__private:_ActionHandler(manager,
 		input:SetValue(quantity)
 			:Draw()
 		state.quantity = quantity
-		manager:ProcessAction("ACTION_PREPARE")
 		self:_UpdateDetails(state, true)
 	elseif action == "ACTION_PREPARE" then
 		if state.quantity == state.prepareQuantity then

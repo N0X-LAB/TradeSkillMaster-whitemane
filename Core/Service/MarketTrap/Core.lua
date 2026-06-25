@@ -15,6 +15,7 @@ local private = {
 	settings = nil,
 	totalSpend = 0,
 	sellerTemp = {},
+	favoritePostPrice = {},
 }
 local SCORE_FORMULA_ENV = {
 	min = min,
@@ -141,6 +142,28 @@ function MarketTrap.GetPostQuantity(_, defaultQuantity)
 	return Math.Bound(private.settings.trapPostQuantity, 1, defaultQuantity or 1)
 end
 
+function MarketTrap.GetPostPrice(itemString, fallbackItemBuyout)
+	local targetPrice = private.GetTargetPrice(itemString)
+	if not targetPrice and private.favoritePostPrice[itemString] then
+		targetPrice = private.favoritePostPrice[itemString]
+	end
+	if not targetPrice then
+		local fallbackSourcePrice = private.GetFallbackSourcePrice(itemString)
+		targetPrice = fallbackSourcePrice and (fallbackSourcePrice * private.GetTargetPriceFallbackMultiplier()) or nil
+	end
+	if not targetPrice and fallbackItemBuyout then
+		targetPrice = fallbackItemBuyout * private.GetTargetPriceFallbackMultiplier()
+	end
+	if not targetPrice then
+		return nil, L["Target price could not be evaluated for the selected item."]
+	end
+	return Math.Bound(targetPrice, 1, MAXIMUM_BID_PRICE)
+end
+
+function MarketTrap.SetFavoritePostPrice(itemString, price)
+	private.favoritePostPrice[itemString] = price
+end
+
 function MarketTrap.IsFavorite(itemString)
 	return private.settings.marketTrapFavorites[itemString] and true or false
 end
@@ -207,6 +230,15 @@ end
 function private.GetTargetPrice(itemString)
 	local value = CustomPrice.GetValue(private.settings.targetPrice, itemString)
 	return value and max(value, 1) or nil
+end
+
+function private.GetTargetPriceFallbackMultiplier()
+	local percent = tonumber(strmatch(private.settings.targetPrice, "^(%d+)%%"))
+	return percent and (percent / 100) or 5
+end
+
+function private.GetFallbackSourcePrice(itemString)
+	return CustomPrice.GetValue("smartavgbuy", itemString)
 end
 
 function private.CalculateScore(quantity, numAuctions, numSellers, itemBuyout, targetPrice)

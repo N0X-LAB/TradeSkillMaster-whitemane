@@ -34,6 +34,7 @@ local private = {
 	targetItem = {},
 	itemList = {},
 	generalMaxQuantity = {},
+	commodityOnly = false,
 }
 local DISENCHANT_CLASS_ID_LOOKUP = {
 	[DisenchantData.ITEM_CLASSES.ARMOR] = Enum.ItemClass.Armor,
@@ -71,10 +72,11 @@ function FilterSearch.GetGreatDealsSearchContext(filterStr)
 	end
 	private.marketValueSource = private.settings.pctSource
 	private.isSpecial = true
+	private.commodityOnly = false
 	return private.searchContext:SetScanContext(L["Great Deals Search"], filterStr, nil, L["Market Value"])
 end
 
-function FilterSearch.GetSearchContext(filterStr, itemInfo)
+function FilterSearch.GetSearchContext(filterStr, itemInfo, commodityOnly, skipSave)
 	local errMsg = nil
 	local origFilterStr = filterStr
 	filterStr, errMsg = private.ValidateFilterStr(filterStr, "NORMAL")
@@ -85,8 +87,10 @@ function FilterSearch.GetSearchContext(filterStr, itemInfo)
 		return nil
 	end
 	private.marketValueSource = private.settings.pctSource
-	private.isSpecial = false
-	return private.searchContext:SetScanContext(filterStr, filterStr, itemInfo, L["Market Value"])
+	private.isSpecial = skipSave and true or false
+	private.commodityOnly = commodityOnly and true or false
+	local scanContext = commodityOnly and { filterStr = filterStr, commodityOnly = true } or filterStr
+	return private.searchContext:SetScanContext(filterStr, scanContext, itemInfo, L["Market Value"])
 end
 
 function FilterSearch.GetGatheringSearchContext(filterStr, mode)
@@ -96,6 +100,7 @@ function FilterSearch.GetGatheringSearchContext(filterStr, mode)
 	end
 	private.marketValueSource = "matprice"
 	private.isSpecial = true
+	private.commodityOnly = false
 	return private.gatheringSearchContext:SetScanContext(L["Gathering Search"], filterStr, nil, L["Material Cost"])
 end
 
@@ -105,11 +110,20 @@ end
 -- Scan Thread
 -- ============================================================================
 
-function private.ScanThread(auctionScan, filterStr)
+function private.ScanThread(auctionScan, scanContext)
 	wipe(private.generalMaxQuantity)
+	local filterStr = scanContext
+	private.commodityOnly = false
+	if type(scanContext) == "table" then
+		filterStr = scanContext.filterStr
+		private.commodityOnly = scanContext.commodityOnly and true or false
+	end
 	if ClientInfo.IsModernAuctionHouse() and filterStr == "" then
-		auctionScan:NewQuery()
+		local query = auctionScan:NewQuery()
 			:SetStr("")
+		if private.commodityOnly then
+			query:AddCustomFilter(private.CommodityOnlyQueryFilter)
+		end
 		wipe(private.targetItem)
 		wipe(private.itemList)
 	else
@@ -157,6 +171,9 @@ function private.ScanThread(auctionScan, filterStr)
 					for _, query in auctionScan:QueryIterator(queryOffset) do
 						private.targetItem[query] = targetItem
 						query:AddCustomFilter(private.TargetItemQueryFilter)
+						if private.commodityOnly then
+							query:AddCustomFilter(private.CommodityOnlyQueryFilter)
+						end
 						if maxQuantity then
 							if firstQuery then
 								-- redirect to the first query so the max quantity spans them all
@@ -195,6 +212,9 @@ function private.ScanThread(auctionScan, filterStr)
 					for _, query in auctionScan:QueryIterator(queryOffset) do
 						private.targetItem[query] = targetItem
 						query:AddCustomFilter(private.TargetItemQueryFilter)
+						if private.commodityOnly then
+							query:AddCustomFilter(private.CommodityOnlyQueryFilter)
+						end
 						if maxQuantity then
 							if firstQuery then
 								-- redirect to the first query so the max quantity spans them all
@@ -219,6 +239,9 @@ function private.ScanThread(auctionScan, filterStr)
 					query:SetUpgrades(itemFilter:GetUpgrades())
 					query:SetPriceRange(itemFilter:GetMinPrice(), itemFilter:GetMaxPrice())
 					query:SetItems(itemFilter:GetItem())
+					if private.commodityOnly then
+						query:AddCustomFilter(private.CommodityOnlyQueryFilter)
+					end
 					-- luacheck: globals CanIMogIt
 					if CanIMogIt and CanIMogIt.PlayerKnowsTransmog then
 						query:SetUnlearned(itemFilter:GetAddedKeyValue("unlearned"))
@@ -401,6 +424,14 @@ function private.TargetItemQueryFilter(query, row)
 	local itemString = row:GetItemString()
 	local targetItemString = private.targetItem[itemString] or private.targetItem[query]
 	return itemString and targetItemString and private.GetTargetItemRate(targetItemString, itemString) == 0
+end
+
+function private.CommodityOnlyQueryFilter(_, row)
+	if not private.commodityOnly then
+		return false
+	end
+	local itemString = row:GetItemString() or row:GetBaseItemString()
+	return not itemString or not ItemInfo.IsCommodity(itemString)
 end
 
 function private.ResultsUpdated(_, query)
