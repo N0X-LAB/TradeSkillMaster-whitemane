@@ -293,7 +293,7 @@ function private.GetCancelCounterText()
 	end
 	local count = TSM.Auctioning.CancelTracker.GetCount()
 	local color = private.GetCancelCounterColor(count, TSM.Auctioning.CancelTracker.GetThreshold())
-	return Theme.GetColor("TEXT_ALT"):ColorText("Cancels: ")..Theme.GetColor(color):ColorText(tostring(count))
+	return Theme.GetColor("TEXT_ALT"):ColorText("Daily Cancels: ")..Theme.GetColor(color):ColorText(tostring(count))
 end
 
 function private.GetCancelCounterColor(count, threshold)

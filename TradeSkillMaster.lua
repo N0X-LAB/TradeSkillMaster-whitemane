@@ -260,7 +260,13 @@ function TSM.OnInitialize(settingsDB)
 			if isRegion then
 				return TSM.AuctionDB.GetRegionItemData(itemString, key)
 			else
-				return private.GetLocalPrice(itemString, key) or TSM.AuctionDB.GetRealmItemData(itemString, key)
+				local auctionDBValue = TSM.AuctionDB.GetRealmItemData(itemString, key)
+				local localValue = private.GetLocalPrice(itemString, key)
+				if key == "marketValue" then
+					return auctionDBValue or localValue
+				else
+					return localValue or auctionDBValue
+				end
 			end
 		end
 	end

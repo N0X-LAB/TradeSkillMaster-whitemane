@@ -211,14 +211,14 @@ function CraftsScrollTable.__private:_HandleQueryUpdate()
 	end
 	wipe(self._createGroupsData)
 	for _, row in self._query:Iterator() do
-		local num, itemString, name, firstOperation, bagQuantity, bankQuantity, auctionQuantity, profession = row:GetFields("num", "itemString", "name", "firstOperation", "bagQuantity", "bankQuantity", "auctionQuantity", "profession")
+		local num, itemString, name, firstOperation, bagQuantity, bankQuantity, auctionQuantity, auctioningPostMax, profession = row:GetFields("num", "itemString", "name", "firstOperation", "bagQuantity", "bankQuantity", "auctionQuantity", "auctioningPostMax", "profession")
 		tinsert(self._data.queued, num)
 		tinsert(self._data.craftName, "|T"..ItemInfo.GetTexture(itemString)..":0|t "..(UIUtils.GetDisplayItemName(itemString) or name))
 		tinsert(self._data.craftName_tooltip, itemString)
 		tinsert(self._data.operation, firstOperation)
 		tinsert(self._data.bags, bagQuantity or "0")
 		tinsert(self._data.bank, bankQuantity or "0")
-		tinsert(self._data.ah, auctionQuantity or "0")
+		tinsert(self._data.ah, private.GetAuctionQuantityText(auctionQuantity or 0, auctioningPostMax or 0, bagQuantity or 0, bankQuantity or 0))
 		tinsert(self._data.craftingCost, self.DEFERRED_DATA)
 		tinsert(self._data.itemValue, self.DEFERRED_DATA)
 		tinsert(self._data.profit, self.DEFERRED_DATA)
@@ -228,6 +228,22 @@ function CraftsScrollTable.__private:_HandleQueryUpdate()
 	end
 	self:_SetNumRows(#self._data.queued)
 	self:Draw()
+end
+
+function private.GetAuctionQuantityText(auctionQuantity, auctioningPostMax, bagQuantity, bankQuantity)
+	local color = nil
+	if auctioningPostMax <= 0 then
+		color = "TEXT"
+	elseif auctionQuantity >= auctioningPostMax then
+		color = "FEEDBACK_GREEN"
+	elseif auctionQuantity == 0 then
+		color = "FEEDBACK_RED"
+	elseif bagQuantity > 0 or bankQuantity > 0 then
+		color = "FEEDBACK_BLUE"
+	else
+		color = "FEEDBACK_YELLOW"
+	end
+	return Theme.GetColor(color):ColorText(tostring(auctionQuantity))
 end
 
 function CraftsScrollTable.__protected:_LoadDeferredRowData(dataIndex)

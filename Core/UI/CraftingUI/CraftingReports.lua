@@ -12,6 +12,7 @@ local RecipeString = TSM.LibTSMTypes:Include("Crafting.RecipeString")
 local Money = TSM.LibTSMUtil:Include("UI.Money")
 local String = TSM.LibTSMUtil:Include("Lua.String")
 local ItemInfo = TSM.LibTSMService:Include("Item.ItemInfo")
+local AuctioningOperation = TSM.LibTSMSystem:Include("AuctioningOperation")
 local CustomPrice = TSM.LibTSMApp:Include("Service.CustomPrice")
 local UIElements = TSM.LibTSMUI:Include("Util.UIElements")
 local UIUtils = TSM.LibTSMUI:Include("Util.UIUtils")
@@ -126,6 +127,7 @@ function private.GetTabElements(self, path)
 				:SetSettings(private.settings, "craftsScrollingTable")
 				:SetQuery(TSM.Crafting.CreateCraftsQuery()
 					:VirtualField("firstOperation", "string", private.FirstOperationVirtualField, "itemString")
+					:VirtualField("auctioningPostMax", "number", private.AuctioningPostMaxVirtualField, "itemString", 0)
 					:VirtualField("itemName", "string", ItemInfo.GetName, "itemString", "?")
 				)
 				:SetScript("OnCraftQueueChange", private.CraftsOnCraftQueueChange)
@@ -330,6 +332,19 @@ end
 
 function private.FirstOperationVirtualField(itemString)
 	return TSM.Operations.GetFirstOperationByItem("Crafting", itemString) or ""
+end
+
+function private.AuctioningPostMaxVirtualField(itemString)
+	local _, operationSettings = TSM.Operations.GetFirstOperationByItem("Auctioning", itemString)
+	if not operationSettings then
+		return 0
+	end
+	local postCap = AuctioningOperation.GetItemPrice(itemString, "postCap", operationSettings)
+	if not postCap or postCap <= 0 then
+		return 0
+	end
+	local stackSize = operationSettings.stackSize and AuctioningOperation.GetItemPrice(itemString, "stackSize", operationSettings) or nil
+	return stackSize and stackSize > 0 and postCap * stackSize or postCap
 end
 
 function private.UpdateCraftsQueryWithFilters(frame)
