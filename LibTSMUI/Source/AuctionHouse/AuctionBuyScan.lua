@@ -58,6 +58,7 @@ local STATE_SCHEMA = Reactive.CreateStateSchema("AUCTION_BUY_SCAN_STATE")
 	:AddNumberField("numFound", 0)
 	:AddNumberField("maxQuantity", 0)
 	:AddNumberField("defaultBuyQuantity", 0)
+	:AddBooleanField("autoBuyOnFind", false)
 	:AddNumberField("lastBuyQuantity", 0)
 	:AddOptionalNumberField("lastBuyIndex")
 	:AddOptionalTableField("pendingFuture")
@@ -87,9 +88,10 @@ local STATE_SCHEMA = Reactive.CreateStateSchema("AUCTION_BUY_SCAN_STATE")
 ---@param postUndercutFunc fun(itemString: string): number Function to get the post buyout undercut amount
 ---@param postBidUndercutFunc fun(itemString: string, itemDisplayedBid: number, itemBuyout: number, buyoutUndercut: number): number Function to get the post bid undercut amount
 ---@param postQuantityFunc fun(itemString: string, defaultQuantity: number): number Function to get the post quantity
+---@param buyQuantityFunc fun(itemString: string, defaultQuantity: number): number Function to get the buy quantity
 ---@return AuctionBuyScan
-function AuctionBuyScan.__static.NewBrose(scanTypeName, isPlayerFunc, alertThresholdFunc, postUndercutFunc, postBidUndercutFunc, postQuantityFunc)
-	return AuctionBuyScan(SCAN_TYPE.BROWSE, scanTypeName, isPlayerFunc, alertThresholdFunc, postUndercutFunc, postBidUndercutFunc, postQuantityFunc)
+function AuctionBuyScan.__static.NewBrose(scanTypeName, isPlayerFunc, alertThresholdFunc, postUndercutFunc, postBidUndercutFunc, postQuantityFunc, buyQuantityFunc)
+	return AuctionBuyScan(SCAN_TYPE.BROWSE, scanTypeName, isPlayerFunc, alertThresholdFunc, postUndercutFunc, postBidUndercutFunc, postQuantityFunc, buyQuantityFunc)
 end
 
 ---Creates a new auction buy scan object for a sniper scan.
@@ -106,12 +108,14 @@ end
 -- Class Meta Methods
 -- ============================================================================
 
-function AuctionBuyScan.__private:__init(scanType, scanTypeName, isPlayerFunc, alertThresholdFunc, postUndercutFunc, postBidUndercutFunc, postQuantityFunc)
+function AuctionBuyScan.__private:__init(scanType, scanTypeName, isPlayerFunc, alertThresholdFunc, postUndercutFunc, postBidUndercutFunc, postQuantityFunc, buyQuantityFunc)
 	self._isPlayerFunc = isPlayerFunc ---@type fun(characterName: string, includeAlts: boolean): boolean
 	self._alertThresholdFunc = alertThresholdFunc
 	self._postUndercutFunc = postUndercutFunc
 	self._postBidUndercutFunc = postBidUndercutFunc
 	self._postQuantityFunc = postQuantityFunc
+	self._buyQuantityFunc = buyQuantityFunc
+	self._autoBuyOnSelection = false
 
 	local state = STATE_SCHEMA:CreateState()
 	state.scanType = scanType
@@ -287,6 +291,14 @@ function AuctionBuyScan:PostAuction()
 	self._manager:ProcessAction("ACTION_POST_AUCTION")
 end
 
+---Sets whether selecting an auction row should immediately open the buy confirmation.
+---@param autoBuyOnSelection boolean
+---@return AuctionBuyScan
+function AuctionBuyScan:SetAutoBuyOnSelection(autoBuyOnSelection)
+	self._autoBuyOnSelection = autoBuyOnSelection
+	return self
+end
+
 ---Gets the current search context.
 ---@return AuctionSearchContext
 function AuctionBuyScan:GetSearchContext()
@@ -340,6 +352,7 @@ function AuctionBuyScan.__private:_ActionHandler(manager, state, action, ...)
 		state.numFound = 0
 		state.maxQuantity = 0
 		state.defaultBuyQuantity = 0
+		state.autoBuyOnFind = false
 		state.lastBuyQuantity = 0
 		state.lastBuyIndex = nil
 		state.numBought = 0
@@ -474,6 +487,7 @@ function AuctionBuyScan.__private:_ActionHandler(manager, state, action, ...)
 			end
 			return
 		end
+		state.autoBuyOnFind = self._autoBuyOnSelection and selection:IsSubRow() and LibTSMUI.IsModernAuctionHouse() and selection:IsCommodity()
 		manager:ProcessAction("ACTION_SET_SELECTED_AUCTION", selection)
 		if state.scanProgress < 1 then
 			if state.pausePending ~= nil then
@@ -515,6 +529,7 @@ function AuctionBuyScan.__private:_ActionHandler(manager, state, action, ...)
 			state.selectionCanCancel = false
 			state.findHashIsSelection = false
 			state.findResult = nil
+			state.autoBuyOnFind = false
 		end
 		local postContext = self:_GetPostContext()
 		state.selectionCanPost = postContext and postContext:CanPost() or false
@@ -549,19 +564,26 @@ function AuctionBuyScan.__private:_ActionHandler(manager, state, action, ...)
 				state.findResult = numCanBuy > 0 and RETAIL_FIND_RESULT_PLACEHOLDER or nil
 				state.numFound = numCanBuy
 				state.maxQuantity = maxCommodity or 1
-				state.defaultBuyQuantity = maxQuantity and min(numCanBuy, maxQuantity) or 1
+				state.defaultBuyQuantity = private.GetDefaultBuyQuantity(self._buyQuantityFunc, itemString, numCanBuy, maxQuantity and min(numCanBuy, maxQuantity) or 1)
 			else
 				state.findResult = result
 				state.numFound = min(#result, maxQuantity and Math.Ceil(maxQuantity / state.selectedAuction:GetQuantities()) or math.huge)
 				state.maxQuantity = maxQuantity or 1
-				state.defaultBuyQuantity = state.numFound
+				state.defaultBuyQuantity = private.GetDefaultBuyQuantity(self._buyQuantityFunc, itemString, state.numFound, state.numFound)
 			end
 			if state.numBidOrBought ~= 0 or state.numConfirmed ~= 0 then
 				state.numBid = 0
 				state.numBought = 0
 				state.numConfirmed = 0
 			end
+			if state.autoBuyOnFind then
+				state.autoBuyOnFind = false
+				if state.selectionCanBuy and state.numFound > 0 then
+					manager:ProcessAction("ACTION_BUY_AUCTION")
+				end
+			end
 		else
+			state.autoBuyOnFind = false
 			if state.selectedAuction:IsSubRow() then
 				-- Failed to find this auction, so remove it
 				local _, rawLink = state.selectedAuction:GetLinks()
@@ -594,7 +616,10 @@ function AuctionBuyScan.__private:_ActionHandler(manager, state, action, ...)
 		state.findHash = state.selectedAuction:GetHashes()
 		state.findHashIsSelection = true
 	elseif action == "ACTION_BUY_AUCTION" then
-		local selection = state.auctionScrollTable:GetSelectedRow()
+		local selection = state.auctionScrollTable and state.auctionScrollTable:GetSelectedRow()
+		if not selection or not selection:IsSubRow() or not state.selectionCanBuy then
+			return
+		end
 		if not self:_ShowConfirmation(true) then
 			-- No confirmation needed
 			local numToBuy = selection:GetQuantities()
@@ -933,6 +958,14 @@ function private.GetConfirmationDialog(state, isBuy, alertThreshold)
 	end
 	private.confirmationVisible = true
 	return true, dialogFrame
+end
+
+function private.GetDefaultBuyQuantity(buyQuantityFunc, itemString, maxQuantity, defaultQuantity)
+	if not buyQuantityFunc or maxQuantity <= 0 then
+		return defaultQuantity
+	end
+	local quantity = tonumber(buyQuantityFunc(itemString, maxQuantity)) or defaultQuantity
+	return Math.Bound(floor(quantity), 1, maxQuantity)
 end
 
 function private.ConfirmationDialogOnHide()

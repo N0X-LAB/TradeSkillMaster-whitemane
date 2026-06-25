@@ -25,9 +25,7 @@ local private = {
 	settings = nil,
 	selectedGroups = {},
 	updateCallbacks = {},
-	scanDividedContainer = { leftWidth = 1080 },
 }
-local SCAN_DIVIDED_CONTAINER_DEFAULT = { leftWidth = 1080 }
 local STATE_SCHEMA = Reactive.CreateStateSchema("MARKET_TRAP_UI_STATE")
 	:AddOptionalTableField("frame")
 	:AddOptionalTableField("scanFrame")
@@ -36,9 +34,6 @@ local STATE_SCHEMA = Reactive.CreateStateSchema("MARKET_TRAP_UI_STATE")
 	:AddBooleanField("groupSelectionCleared", true)
 	:AddBooleanField("hasFavoriteTraps", false)
 	:AddBooleanField("favoriteScanOnly", false)
-	:AddStringField("candidateText", "")
-	:AddStringField("executeText", "")
-	:AddBooleanField("candidateIsValid", false)
 	:Commit()
 local FavoriteList = UIElements.Define("MarketTrapFavoriteList", "List")
 local FAVORITE_LIST_ROW_HEIGHT = 20
@@ -122,7 +117,8 @@ function MarketTrap.OnInitialize(settingsDB)
 	local state = STATE_SCHEMA:CreateState()
 	private.state = state
 	private.manager = UIManager.Create("MARKET_TRAP", state, private.ActionHandler)
-	private.auctionBuyScan = AuctionBuyScan.NewBrose(L["Market Trap"], PlayerInfo.AuctionOwnerIsPlayer, nil, nil, nil, TSM.MarketTrap.GetPostQuantity)
+	private.auctionBuyScan = AuctionBuyScan.NewBrose(L["Market Trap"], PlayerInfo.AuctionOwnerIsPlayer, nil, nil, nil, TSM.MarketTrap.GetPostQuantity, TSM.MarketTrap.GetPostQuantity)
+		:SetAutoBuyOnSelection(true)
 
 	local function GetFrame()
 		return private.GetMarketTrapFrame(state)
@@ -291,21 +287,15 @@ function private.GetScanFrame(state)
 				:SetAction("OnClick", "ACTION_STOP_SCAN")
 			)
 		)
-		:AddChild(UIElements.New("DividedContainer", "content")
-			:SetContextTable(private.scanDividedContainer, SCAN_DIVIDED_CONTAINER_DEFAULT)
-			:SetMinWidth(520, 300)
-			:SetBackgroundColor("PRIMARY_BG_ALT")
-			:SetLeftChild(UIElements.New("AuctionScrollTable", "auctions")
-				:SetSettings(private.settings, "marketTrapAuctionScrollingTable")
-				:SetCreatedGroupName(L["Market Trap"].." - "..state.searchName)
-				:SetBrowseResultsVisible(true)
-				:SetRowScoreFunction(TSM.MarketTrap.GetRowScore)
-				:SetRowFilterFunction(state.favoriteScanOnly and TSM.MarketTrap.ShouldShowFavoriteRow or TSM.MarketTrap.ShouldShowRow)
-				:SetRowFavoriteFunction(private.IsRowFavorite)
-				:SetRowFavoriteChangedFunction(private.SetRowFavorite)
-				:SetIsPlayerFunction(PlayerInfo.AuctionOwnerIsPlayer)
-			)
-			:SetRightChild(private.GetReviewPanel(state))
+		:AddChild(UIElements.New("AuctionScrollTable", "auctions")
+			:SetSettings(private.settings, "marketTrapAuctionScrollingTable")
+			:SetCreatedGroupName(L["Market Trap"].." - "..state.searchName)
+			:SetBrowseResultsVisible(true)
+			:SetRowScoreFunction(TSM.MarketTrap.GetRowScore)
+			:SetRowFilterFunction(state.favoriteScanOnly and TSM.MarketTrap.ShouldShowFavoriteRow or TSM.MarketTrap.ShouldShowRow)
+			:SetRowFavoriteFunction(private.IsRowFavorite)
+			:SetRowFavoriteChangedFunction(private.SetRowFavorite)
+			:SetIsPlayerFunction(PlayerInfo.AuctionOwnerIsPlayer)
 		)
 		:AddChild(UIElements.New("HorizontalLine", "bottomLine"))
 		:AddChild(private.auctionBuyScan:CreateBottomUIFrameForBrowse())
@@ -317,49 +307,12 @@ end
 
 function private.ScanFrameOnUpdate(frame)
 	frame:SetScript("OnUpdate", nil)
-	private.auctionBuyScan:SetAuctionScrollTable(frame:GetElement("content.auctions"))
-end
-
----@param state MarketTrapUIState
-function private.GetReviewPanel(state)
-	return UIElements.New("Frame", "review")
-		:SetLayout("VERTICAL")
-		:SetPadding(8)
-		:SetBackgroundColor("PRIMARY_BG_ALT")
-		:AddChild(private.CreateHeading("reviewHeading", L["Candidate Review"]))
-		:AddChild(UIElements.New("Text", "candidateText")
-			:SetHeight(170)
-			:SetMargin(0, 0, 0, 8)
-			:SetFont("BODY_BODY2")
-			:SetJustifyV("TOP")
-			:SetTextPublisher(state:PublisherForKeyChange("candidateText"))
-		)
-		:AddChild(UIElements.New("ActionButton", "reviewBtn")
-			:SetHeight(24)
-			:SetMargin(0, 0, 0, 8)
-			:SetText(L["Review Candidate"])
-			:SetAction("OnClick", "ACTION_REVIEW_CANDIDATE")
-		)
-		:AddChild(UIElements.New("ActionButton", "executeBtn")
-			:SetHeight(24)
-			:SetMargin(0, 0, 0, 12)
-			:SetText(L["Controlled Execute"])
-			:SetDisabledPublisher(state:PublisherForKeyChange("candidateIsValid"):InvertBoolean())
-			:SetAction("OnClick", "ACTION_CONTROLLED_EXECUTE")
-		)
-		:AddChild(UIElements.New("HorizontalLine", "line"))
-		:AddChild(private.CreateHeading("executeHeading", L["Execute Actions"]))
-		:AddChild(UIElements.New("Text", "executeText")
-			:SetHeight(120)
-			:SetFont("BODY_BODY2")
-			:SetJustifyV("TOP")
-			:SetTextPublisher(state:PublisherForKeyChange("executeText"))
-		)
+	private.auctionBuyScan:SetAuctionScrollTable(frame:GetElement("auctions"))
 end
 
 ---@param state MarketTrapUIState
 function private.GetSelectedScanRow(state)
-	return state.scanFrame and state.scanFrame:GetElement("content.auctions"):GetSelectedRow() or nil
+	return state.scanFrame and state.scanFrame:GetElement("auctions"):GetSelectedRow() or nil
 end
 
 function private.CreateHeading(id, text)
@@ -408,9 +361,6 @@ function private.ActionHandler(manager, state, action, ...)
 		local name = searchContext:GetName()
 		assert(name)
 		state.searchName = name
-		state.candidateText = L["Select a result and review the candidate."]
-		state.executeText = L["Controlled Execute actions will appear here."]
-		state.candidateIsValid = false
 		TSM.MarketTrap.ResetExecuteSession()
 		state.frame:SetPath("scan", true)
 		private.auctionBuyScan:StartSearch(searchContext)
@@ -422,29 +372,9 @@ function private.ActionHandler(manager, state, action, ...)
 		end
 	elseif action == "ACTION_SCAN_BACK_BUTTON_CLICKED" then
 		state.searchName = ""
-		state.candidateText = ""
-		state.executeText = ""
-		state.candidateIsValid = false
 		state.favoriteScanOnly = false
 		state.frame:SetPath("selection", true)
 		private.auctionBuyScan:EndSearch()
-	elseif action == "ACTION_REVIEW_CANDIDATE" then
-		local candidate, reason = TSM.MarketTrap.BuildCandidate(private.GetSelectedScanRow(state))
-		local isValid, validationReason = TSM.MarketTrap.ValidateCandidate(candidate)
-		state.candidateText = TSM.MarketTrap.GetCandidateText(candidate, reason or validationReason).."\n"..validationReason
-		state.executeText = isValid and L["Candidate is ready for controlled execution."] or validationReason
-		state.candidateIsValid = isValid
-	elseif action == "ACTION_CONTROLLED_EXECUTE" then
-		local candidate, reason = TSM.MarketTrap.BuildCandidate(private.GetSelectedScanRow(state))
-		local isValid, validationReason = TSM.MarketTrap.ValidateCandidate(candidate)
-		state.candidateText = TSM.MarketTrap.GetCandidateText(candidate, reason or validationReason).."\n"..validationReason
-		state.candidateIsValid = isValid
-		if isValid then
-			state.executeText = L["Opening the post action for this candidate."]
-			private.auctionBuyScan:PostAuction()
-		else
-			state.executeText = validationReason
-		end
 	else
 		error("Unknown action: "..tostring(action))
 	end
@@ -458,7 +388,7 @@ function private.GetGroupSearchContext(state)
 			tinsert(private.selectedGroups, groupPath)
 		end
 	end
-	local searchContext = TSM.Shopping.GroupSearch.GetSearchContext(private.selectedGroups)
+	local searchContext = TSM.Shopping.GroupSearch.GetSearchContext(private.selectedGroups, true)
 	assert(searchContext)
 	return searchContext
 end
@@ -467,7 +397,7 @@ function private.GetFavoriteSearchContext()
 	local filterList = TempTable.Acquire()
 	for itemString in TSM.MarketTrap.FavoriteIterator() do
 		local itemName = ItemInfo.GetName(itemString)
-		if itemName then
+		if itemName and ItemInfo.IsCommodity(itemString) then
 			tinsert(filterList, itemName.."/exact")
 		end
 	end

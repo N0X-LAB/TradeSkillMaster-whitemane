@@ -13,13 +13,13 @@ local private = {
 	settings = nil,
 }
 local SETTING_TOOLTIPS = {
-	maxAuctions = L["The maximum number of auctions an item can have before it stops being considered a Market Trap candidate."],
+	maxAuctions = L["The maximum number of sellers an item can have before it stops being considered a Market Trap candidate."],
 	maxQuantity = L["The maximum total quantity an item can have before it stops being considered a Market Trap candidate."],
 	maxSpendPerItem = L["The maximum gold Market Trap should allow for a single candidate during controlled execute."],
 	maxTotalSpend = L["The maximum total gold Market Trap should allow during a controlled execute session."],
 	maxDepositCost = L["The maximum deposit cost Market Trap should allow when reviewing controlled execute candidates."],
 	targetPrice = L["The price source used as the target repost price for Market Trap candidates."],
-	scoreFormula = L["The Market Trap scoring formula. Available variables include scarcity, quantityScarcity, valueGap, numAuctions, quantity, itemBuyout, and targetPrice."],
+	scoreFormula = L["The Market Trap scoring formula. Scores are clamped from 0 to 100. Available variables include quantityScarcity, sellerScarcity, scarcity, numSellers, numAuctions, quantity, itemBuyout, targetPrice, and valueGap."],
 	minScore = L["The minimum Market Trap score required for controlled execute."],
 	maxCandidates = L["The maximum number of candidates to review from a discovery scan."],
 	trapPostQuantity = L["The number of items to post when reposting a Market Trap candidate."],
@@ -64,20 +64,20 @@ function private.GetMarketTrapSettingsFrame()
 	return UIElements.New("ScrollFrame", "marketTrapSettings")
 		:SetPadding(8, 8, 8, 0)
 		:AddChild(TSM.MainUI.Settings.CreateExpandableSection("MarketTrap", "discovery", L["Discovery Scan"], L["Controls which auctions are considered during a Market Trap discovery scan."])
-			:AddChild(private.CreateNumberInput("maxAuctions", L["Maximum auctions"], "0:9999", SETTING_TOOLTIPS.maxAuctions))
+			:AddChild(private.CreateNumberInput("maxAuctions", L["Maximum sellers"], "0:9999", SETTING_TOOLTIPS.maxAuctions))
 			:AddChild(private.CreateNumberInput("maxQuantity", L["Maximum quantity"], "0:999999", SETTING_TOOLTIPS.maxQuantity))
 			:AddChild(private.CreateNumberInput("maxCandidates", L["Maximum candidates"], "0:9999", SETTING_TOOLTIPS.maxCandidates))
 			:AddChild(private.CreateCheckbox("ignoreNoSaleData", L["Ignore candidates with missing sale data"], SETTING_TOOLTIPS.ignoreNoSaleData))
 		)
-		:AddChild(TSM.MainUI.Settings.CreateExpandableSection("MarketTrap", "review", L["Candidate Review"], L["Controls how Market Trap scores and prices candidates."])
+		:AddChild(TSM.MainUI.Settings.CreateExpandableSection("MarketTrap", "review", L["Score"], L["Controls how Market Trap scores scan results."])
 			:AddChild(private.CreateTextInput("scoreFormula", L["Score formula"], SETTING_TOOLTIPS.scoreFormula))
-			:AddChild(private.CreateNumberInput("minScore", L["Minimum score"], "0:999999", SETTING_TOOLTIPS.minScore))
+			:AddChild(private.CreateNumberInput("minScore", L["Minimum score"], "0:100", SETTING_TOOLTIPS.minScore))
 			:AddChild(TSM.MainUI.Settings.CreateInputWithReset("targetPrice", L["Target repost price"], private.settings, "targetPrice", nil, nil, SETTING_TOOLTIPS.targetPrice)
 				:SetMargin(0, 0, 0, 12)
 			)
 			:AddChild(private.CreateCheckbox("showBelowMinScore", L["Show results below minimum score"], SETTING_TOOLTIPS.showBelowMinScore))
 		)
-		:AddChild(TSM.MainUI.Settings.CreateExpandableSection("MarketTrap", "execute", L["Controlled Execute"], L["Controls Market Trap spend limits and execution safeguards."])
+		:AddChild(TSM.MainUI.Settings.CreateExpandableSection("MarketTrap", "execute", L["Execution"], L["Controls Market Trap spend limits and posting safeguards."])
 			:AddChild(TSM.MainUI.Settings.CreateInputWithReset("maxSpendPerItem", L["Maximum spend per item"], private.settings, "maxSpendPerItem", nil, nil, SETTING_TOOLTIPS.maxSpendPerItem)
 				:SetMargin(0, 0, 0, 12)
 			)

@@ -160,7 +160,8 @@ function Schema.Get()
 	-- [132] added global.marketTrapOptions.trapPostQuantity
 	-- [133] added global.marketTrapOptions.showBelowMinScore, updated global.auctionUIContext.marketTrapAuctionScrollingTable
 	-- [134] added global.userData.marketTrapFavorites, updated global.auctionUIContext.marketTrapAuctionScrollingTable
-	return Settings.NewSchema(134, 10)
+	-- [135] updated global.marketTrapOptions.scoreFormula default
+	return Settings.NewSchema(135, 10)
 		:EnterScope("global")
 			:EnterNamespace("debug")
 				:AddBoolean("chatLoggingEnabled", false, 19)
@@ -318,7 +319,7 @@ function Schema.Get()
 				:AddString("maxTotalSpend", "1000g", 131)
 				:AddString("maxDepositCost", "25g", 131)
 				:AddString("targetPrice", "500% first(dbmarket, dbregionmarketavg, dbhistorical, dbminbuyout)", 131)
-				:AddString("scoreFormula", "scarcity * 100 + valueGap", 131)
+				:AddString("scoreFormula", "quantityScarcity * 75 + sellerScarcity * 25", 135)
 				:AddNumber("minScore", 50, 131)
 				:AddNumber("maxCandidates", 50, 131)
 				:AddNumber("trapPostQuantity", 1, 132)

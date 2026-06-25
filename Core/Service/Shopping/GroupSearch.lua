@@ -40,8 +40,8 @@ function GroupSearch.OnInitialize()
 	private.searchContext = GroupSearchContext(private.scanThreadId, private.MarketValueFunction)
 end
 
-function GroupSearch.GetSearchContext(groupList)
-	return private.searchContext:SetScanContext(L["Group Search"], groupList, nil, L["Max Price"])
+function GroupSearch.GetSearchContext(groupList, commodityOnly)
+	return private.searchContext:SetScanContext(L["Group Search"], commodityOnly and { groupList = groupList, commodityOnly = true } or groupList, nil, L["Max Price"])
 end
 
 
@@ -51,6 +51,11 @@ end
 -- ============================================================================
 
 function private.ScanThread(auctionScan, groupList)
+	local commodityOnly = false
+	if groupList.commodityOnly then
+		commodityOnly = true
+		groupList = groupList.groupList
+	end
 	wipe(private.seenMaxPrice)
 
 	-- create the list of items, and add filters for them
@@ -60,7 +65,10 @@ function private.ScanThread(auctionScan, groupList)
 	for _, groupPath in ipairs(groupList) do
 		private.groups[groupPath] = true
 		for _, itemString in Group.ItemIterator(groupPath) do
-			local isValid, maxQuantity = private.GetRestockQuantity(itemString)
+			local isValid, maxQuantity = not commodityOnly or ItemInfo.IsCommodity(itemString), nil
+			if isValid then
+				isValid, maxQuantity = private.GetRestockQuantity(itemString)
+			end
 			if isValid then
 				private.maxQuantity[itemString] = maxQuantity
 				tinsert(private.itemList, itemString)

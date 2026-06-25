@@ -14,6 +14,7 @@ local Math = TSM.LibTSMUtil:Include("Lua.Math")
 local private = {
 	settings = nil,
 	totalSpend = 0,
+	sellerTemp = {},
 }
 local SCORE_FORMULA_ENV = {
 	min = min,
@@ -22,6 +23,8 @@ local SCORE_FORMULA_ENV = {
 	ceil = ceil,
 	abs = abs,
 }
+local OLD_DEFAULT_SCORE_FORMULA = "scarcity * 100 + valueGap"
+local DEFAULT_SCORE_FORMULA = "quantityScarcity * 75 + sellerScarcity * 25"
 
 
 
@@ -45,6 +48,9 @@ function MarketTrap.OnInitialize(settingsDB)
 		:AddKey("global", "marketTrapOptions", "ignoreNoSaleData")
 		:AddKey("global", "marketTrapOptions", "requireConfirmation")
 		:AddKey("global", "userData", "marketTrapFavorites")
+	if private.settings.scoreFormula == OLD_DEFAULT_SCORE_FORMULA then
+		private.settings.scoreFormula = DEFAULT_SCORE_FORMULA
+	end
 end
 
 function MarketTrap.ResetExecuteSession()
@@ -59,7 +65,7 @@ function MarketTrap.BuildCandidate(row)
 	if not row then
 		return nil, L["Select an auction first."]
 	end
-	local success, itemString, quantity, numAuctions, buyout, itemBuyout, isCommodity = pcall(private.GetRowInfo, row)
+	local success, itemString, quantity, numAuctions, numSellers, buyout, itemBuyout, isCommodity = pcall(private.GetRowInfo, row)
 	if not success then
 		return nil, L["The selected auction is no longer available. Select it again after the scan updates."]
 	end
@@ -73,12 +79,13 @@ function MarketTrap.BuildCandidate(row)
 	if not quantity or not numAuctions or not itemBuyout then
 		return nil, L["The selected auction does not have complete pricing data yet."]
 	end
-	local score = private.CalculateScore(quantity, numAuctions, itemBuyout, targetPrice)
+	local score = private.CalculateScore(quantity, numAuctions, numSellers, itemBuyout, targetPrice)
 	return {
 		itemString = itemString,
 		itemName = ItemInfo.GetName(itemString) or itemString,
 		quantity = quantity,
 		numAuctions = numAuctions,
+		numSellers = numSellers,
 		buyout = buyout or (itemBuyout * quantity),
 		itemBuyout = itemBuyout,
 		targetPrice = targetPrice,
@@ -90,14 +97,15 @@ function MarketTrap.ValidateCandidate(candidate)
 	if not candidate then
 		return false, L["Select an auction first."]
 	end
-	if candidate.numAuctions > private.settings.maxAuctions then
-		return false, format(L["Too many auctions: %d / %d."], candidate.numAuctions, private.settings.maxAuctions)
+	if candidate.numSellers > private.settings.maxAuctions then
+		return false, format(L["Too many sellers: %d / %d."], candidate.numSellers, private.settings.maxAuctions)
 	end
 	if candidate.quantity > private.settings.maxQuantity then
 		return false, format(L["Too much quantity: %d / %d."], candidate.quantity, private.settings.maxQuantity)
 	end
-	if candidate.score < private.settings.minScore then
-		return false, format(L["Score too low: %d / %d."], candidate.score, private.settings.minScore)
+	local minScore = Math.Bound(private.settings.minScore, 0, 100)
+	if candidate.score < minScore then
+		return false, format(L["Score too low: %d / %d."], candidate.score, minScore)
 	end
 	local maxSpendPerItem = Money.FromString(private.settings.maxSpendPerItem) or math.huge
 	if candidate.buyout > maxSpendPerItem then
@@ -119,10 +127,10 @@ function MarketTrap.GetCandidateText(candidate, reason)
 	end
 	local targetPriceText = candidate.targetPrice and Money.ToStringForUI(candidate.targetPrice) or "---"
 	return format(
-		L["%s: score %d, %d auctions, %d quantity, current %s, target %s"],
+		L["%s: score %d, %d sellers, %d quantity, current %s, target %s"],
 		candidate.itemName,
 		candidate.score,
-		candidate.numAuctions,
+		candidate.numSellers,
 		candidate.quantity,
 		Money.ToStringForUI(candidate.itemBuyout),
 		targetPriceText
@@ -171,7 +179,7 @@ function MarketTrap.ShouldShowRow(row)
 	if not candidate then
 		return false
 	end
-	return private.settings.showBelowMinScore or candidate.score >= private.settings.minScore
+	return private.settings.showBelowMinScore or candidate.score >= Math.Bound(private.settings.minScore, 0, 100)
 end
 
 function MarketTrap.ShouldShowFavoriteRow(row)
@@ -190,10 +198,10 @@ end
 
 function private.GetRowInfo(row)
 	local itemString = row:GetItemString() or row:GetBaseItemString()
-	local quantity, numAuctions = row:GetQuantities()
+	local quantity, numAuctions, numSellers = private.GetRowStats(row)
 	local buyout, itemBuyout, minPrice = row:GetBuyouts()
 	itemBuyout = itemBuyout or minPrice
-	return itemString, quantity, numAuctions, buyout, itemBuyout, row:IsCommodity()
+	return itemString, quantity, numAuctions, numSellers, buyout, itemBuyout, row:IsCommodity()
 end
 
 function private.GetTargetPrice(itemString)
@@ -201,22 +209,59 @@ function private.GetTargetPrice(itemString)
 	return value and max(value, 1) or nil
 end
 
-function private.CalculateScore(quantity, numAuctions, itemBuyout, targetPrice)
+function private.CalculateScore(quantity, numAuctions, numSellers, itemBuyout, targetPrice)
 	local maxAuctions = max(private.settings.maxAuctions, 1)
 	local maxQuantity = max(private.settings.maxQuantity, 1)
-	local scarcity = max(0, (maxAuctions - numAuctions + 1) / maxAuctions)
-	local quantityScarcity = max(0, (maxQuantity - quantity + 1) / maxQuantity)
+	local sellerScarcity = private.CalculateScarcity(numSellers or numAuctions or maxAuctions, maxAuctions)
+	local quantityScarcity = private.CalculateScarcity(quantity or maxQuantity, maxQuantity)
 	local valueGap = targetPrice and max(0, (targetPrice - itemBuyout) / max(itemBuyout, 1)) or 0
 	local formulaScore = private.EvaluateScoreFormula(private.settings.scoreFormula, {
-		scarcity = scarcity,
+		scarcity = sellerScarcity,
+		sellerScarcity = sellerScarcity,
 		quantityScarcity = quantityScarcity,
 		valueGap = valueGap,
 		numAuctions = numAuctions,
+		numSellers = numSellers or numAuctions,
 		quantity = quantity,
 		itemBuyout = itemBuyout,
 		targetPrice = targetPrice or 0,
 	})
-	return floor(formulaScore or ((scarcity * 60) + (quantityScarcity * 25) + min(valueGap * 15, 150)))
+	return Math.Bound(floor(formulaScore or ((quantityScarcity * 75) + (sellerScarcity * 25))), 0, 100)
+end
+
+function private.CalculateScarcity(value, maxValue)
+	if maxValue <= 1 then
+		return value <= 1 and 1 or 0
+	end
+	return Math.Bound(1 - ((value - 1) / (maxValue - 1)), 0, 1)
+end
+
+function private.GetRowStats(row)
+	local quantity, numAuctions = row:GetQuantities()
+	local numSellers = nil
+	local resultRow = row:IsSubRow() and row:GetResultRow() or row
+	if resultRow and resultRow.SubRowIterator then
+		quantity = 0
+		numAuctions = 0
+		for _, subRow in resultRow:SubRowIterator() do
+			local subQuantity, subNumAuctions = subRow:GetQuantities()
+			quantity = quantity + (subQuantity or 0) * (subNumAuctions or 1)
+			numAuctions = numAuctions + (subNumAuctions or 1)
+			local ownerStr = subRow:GetOwnerInfo()
+			if ownerStr and ownerStr ~= "" then
+				private.sellerTemp[ownerStr] = true
+			end
+		end
+		numSellers = 0
+		for _ in pairs(private.sellerTemp) do
+			numSellers = numSellers + 1
+		end
+		if numSellers == 0 then
+			numSellers = numAuctions
+		end
+		wipe(private.sellerTemp)
+	end
+	return quantity, numAuctions, numSellers or numAuctions
 end
 
 function private.EvaluateScoreFormula(formula, values)
