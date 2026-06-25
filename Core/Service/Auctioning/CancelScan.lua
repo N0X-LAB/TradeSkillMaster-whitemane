@@ -139,6 +139,9 @@ function CancelScan.HandleConfirm(success, canRetry)
 		assert(not success)
 		confirmRow:SetField("numFailed", confirmRow:GetField("numFailed") + 1)
 	end
+	if success then
+		TSM.Auctioning.CancelTracker.RecordCancel()
+	end
 	confirmRow:SetField("numConfirmed", confirmRow:GetField("numConfirmed") + 1)
 		:Update()
 	confirmRow:Release()

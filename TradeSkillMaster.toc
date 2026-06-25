@@ -4,7 +4,7 @@
 ## Notes: Auction house and gold making addon.
 ## Author: TradeSkillMaster Team
 ## Version: v4.14.17
-## SavedVariables: TradeSkillMasterDB, TSMItemInfoDB, TSMLocalPriceDB
+## SavedVariables: TradeSkillMasterDB, TSMItemInfoDB, TSMLocalPriceDB, TSMCancelTrackerDB
 ## OptionalDeps: ArkInventory, Auc-Advanced, Auctionator, TheUndermineJournal, BootyBayGazette, AuctionDB, CanIMogIt
 ## X-Embeds: Ace3, LibDataBroker-1.1, LibDBIcon-1.0, LibRealmInfo, LibDeflate, LibSerialize, LibAHTab
 
@@ -61,6 +61,7 @@ Core\Service\Accounting\Merchant.lua
 Core\Service\Accounting\Trade.lua
 Core\Service\Accounting\Sync.lua
 Core\Service\Auctioning\Core.lua
+Core\Service\Auctioning\CancelTracker.lua
 Core\Service\Auctioning\CancelScan.lua
 Core\Service\Auctioning\Log.lua
 Core\Service\Auctioning\PostScan.lua

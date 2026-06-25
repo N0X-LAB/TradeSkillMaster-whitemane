@@ -148,6 +148,9 @@ function private.ChatMsgSystemEventHandler(_, msg)
 		local hash = tremove(private.pendingHashes, 1)
 		assert(hash)
 		Log.Info("Confirmed (hash=%d)", hash)
+		if not private.pendingFuture then
+			TSM.Auctioning.CancelTracker.RecordCancel()
+		end
 	end
 end
 
@@ -169,6 +172,7 @@ function private.PendingFutureOnDone()
 	assert(hash)
 	if result then
 		Log.Info("Confirmed (hash=%d)", hash)
+		TSM.Auctioning.CancelTracker.RecordCancel()
 	else
 		Log.Info("Failed to cancel (hash=%d)", hash)
 		if private.expectedCounts[hash] then

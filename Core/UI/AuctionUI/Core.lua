@@ -55,6 +55,7 @@ function AuctionUI.OnInitialize(settingsDB)
 	DefaultUI.RegisterAuctionHouseVisibleCallback(private.AuctionFrameHidden, false)
 	AuctionScan.ConfigureLock(L["A scan is already in progress. Please stop that scan before starting another one."], private.ScanLockCallback)
 	ItemLinked.RegisterCallback(private.ItemLinkedCallback, true)
+	TSM.Auctioning.CancelTracker.RegisterCallback(private.UpdateCancelCounter)
 	local loadTimer = DelayTimer.New("AUCTION_UI_LOAD_BLIZZ", function() C_AddOns.LoadAddOn(HasModernAuctionHouse() and "Blizzard_AuctionHouseUI" or "Blizzard_AuctionUI") end)
 	loadTimer:RunForTime(1)
 end
@@ -208,6 +209,7 @@ function private.CreateMainFrame()
 		:AddPlayerGold(private.settings)
 		:AddSwitchButton(private.SwitchBtnOnClick)
 		:SetScript("OnHide", private.BaseFrameOnHide)
+	private.AddCancelCounter(frame)
 	if AppHelper.IsDesktopAppSupported() then
 		frame:AddAppStatusIcon(AppHelper.GetRegion(), AppHelper.GetLastSync(), TSM.AuctionDB.GetAppDataUpdateTimes())
 	end
@@ -219,6 +221,17 @@ function private.CreateMainFrame()
 		frame:ShowDialogFrame(whatsNewDialog)
 	end
 	return frame
+end
+
+function private.AddCancelCounter(frame)
+	local titleFrame = frame:GetElement("titleFrame")
+	titleFrame:AddChildBeforeById("playerGold", UIElements.New("Text", "cancelCounter")
+		:SetWidth("AUTO")
+		:SetMargin(0, 8, 0, 0)
+		:SetFont("TABLE_TABLE1")
+		:SetJustifyH("RIGHT")
+		:SetText(private.GetCancelCounterText())
+	)
 end
 
 
@@ -263,6 +276,38 @@ function private.SwitchBtnOnClick(button)
 	end
 	UIParent_OnEvent(UIParent, "AUCTION_HOUSE_SHOW")
 	private.isSwitching = false
+end
+
+function private.UpdateCancelCounter()
+	if not private.frame then
+		return
+	end
+	private.frame:GetElement("titleFrame.cancelCounter")
+		:SetText(private.GetCancelCounterText())
+	private.frame:Draw()
+end
+
+function private.GetCancelCounterText()
+	if not TSM.Auctioning.CancelTracker.GetShown() then
+		return ""
+	end
+	local count = TSM.Auctioning.CancelTracker.GetCount()
+	local color = private.GetCancelCounterColor(count, TSM.Auctioning.CancelTracker.GetThreshold())
+	return Theme.GetColor("TEXT_ALT"):ColorText("Cancels: ")..Theme.GetColor(color):ColorText(tostring(count))
+end
+
+function private.GetCancelCounterColor(count, threshold)
+	threshold = max(threshold or 1, 1)
+	local pct = count / threshold
+	if pct >= 1 then
+		return "FEEDBACK_RED"
+	elseif pct >= 0.9 then
+		return "FEEDBACK_ORANGE"
+	elseif pct >= 0.7 then
+		return "FEEDBACK_YELLOW"
+	else
+		return "TEXT"
+	end
 end
 
 function private.TSMTabOnClick()

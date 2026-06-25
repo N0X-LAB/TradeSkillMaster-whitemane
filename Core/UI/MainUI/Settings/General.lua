@@ -64,6 +64,8 @@ local SETTING_TOOLTIPS = {
 	ignoreGuilds = L["Selecting any guild in this drop down will instruct TSM to disregard the contents of the guild bank for inventory tracking purposes."],
 	destroyValueSource = L["Select from any available price source in this drop down list to change the way TSM values the results of destroying an item (i.e disenchanting, prospecting, or milling)."],
 	auctionDBAltRealm = L["Loads AuctionDB data for an additional realm for display in the tooltip."],
+	showAuctionCancelCounter = "Shows today's confirmed auction cancel count in the Auction House title bar.",
+	auctionCancelThreshold = "The daily cancel count used as the reference for coloring the Auction House cancel counter.",
 }
 
 
@@ -203,6 +205,48 @@ function private.GetGeneralSettingsFrame()
 					:SetSettingInfo(private.settings, "protectAuctionHouse")
 				)
 				:AddChild(UIElements.New("Spacer", "spacer"))
+			)
+			:AddChild(UIElements.New("Frame", "cancelCounterLine")
+				:SetLayout("HORIZONTAL")
+				:SetHeight(20)
+				:SetMargin(0, 0, 0, 12)
+				:AddChild(UIElements.New("Checkbox", "showAuctionCancelCounter")
+					:SetWidth("AUTO")
+					:SetFont("BODY_BODY2_MEDIUM")
+					:SetText("Show daily auction cancel counter")
+					:SetChecked(TSM.Auctioning.CancelTracker.GetShown())
+					:SetScript("OnValueChanged", private.CancelCounterOnValueChanged)
+					:SetTooltip(SETTING_TOOLTIPS.showAuctionCancelCounter, "__parent")
+				)
+				:AddChild(UIElements.New("Spacer", "spacer"))
+			)
+			:AddChild(UIElements.New("Frame", "cancelThresholdLabelLine")
+				:SetLayout("HORIZONTAL")
+				:SetHeight(20)
+				:SetMargin(0, 0, 12, 4)
+				:AddChild(UIElements.New("Text", "cancelThresholdLabel")
+					:SetFont("BODY_BODY2_MEDIUM")
+					:SetText("Cancel threshold")
+				)
+			)
+			:AddChild(UIElements.New("Frame", "cancelThresholdInputLine")
+				:SetLayout("HORIZONTAL")
+				:SetHeight(24)
+				:SetMargin(0, 0, 0, 12)
+				:AddChild(UIElements.New("Input", "cancelThresholdInput")
+					:SetMargin(0, 8, 0, 0)
+					:SetBackgroundColor("ACTIVE_BG")
+					:SetFont("BODY_BODY2_MEDIUM")
+					:SetValidateFunc("NUMBER", "1:999999")
+					:SetValue(TSM.Auctioning.CancelTracker.GetThreshold())
+					:SetScript("OnValueChanged", private.CancelThresholdOnValueChanged)
+					:SetTooltip(SETTING_TOOLTIPS.auctionCancelThreshold, "__parent")
+				)
+				:AddChild(UIElements.New("Text", "rangeText")
+					:SetWidth("AUTO")
+					:SetFont("BODY_BODY3")
+					:SetText("(minimum 1)")
+				)
 			)
 			:AddChild(TSM.MainUI.Settings.CreateInputWithReset("generalGroupPriceField", L["Filter group item lists based on the following price source"], private.settings, "groupPriceSource", nil, nil, SETTING_TOOLTIPS.groupPriceSource))
 			:AddChild(UIElements.New("Frame", "dropdownLabelLine")
@@ -478,6 +522,14 @@ function private.GlobalOperationsConfirmed(checkbox, newValue)
 	checkbox:SetChecked(newValue, true)
 		:Draw()
 	TSM.Operations.SetStoredGlobally(newValue)
+end
+
+function private.CancelCounterOnValueChanged(_, value)
+	TSM.Auctioning.CancelTracker.SetShown(value)
+end
+
+function private.CancelThresholdOnValueChanged(input)
+	TSM.Auctioning.CancelTracker.SetThreshold(input:GetValue())
 end
 
 function private.ChatTabOnSelectionChanged(dropdown)
