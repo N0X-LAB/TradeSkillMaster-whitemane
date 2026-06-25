@@ -29,7 +29,16 @@ local ICON_SPACING = 4
 local EXPANDER_TEXTURE_EXPANDED = "iconPack.12x12/Caret/Down"
 local EXPANDER_TEXTURE_COLLAPSED = "iconPack.12x12/Caret/Right"
 local RUNNING_TEXTURE = "iconPack.12x12/Running"
+local FAVORITE_TEXTURE = "iconPack.12x12/Star/Filled"
+local NON_FAVORITE_TEXTURE = "iconPack.12x12/Star/Unfilled"
 local COL_INFO = {
+	favorite = {
+		titleIcon = NON_FAVORITE_TEXTURE,
+		justifyH = "CENTER",
+		font = "BODY_BODY3",
+		disableHiding = true,
+		disableReordering = true,
+	},
 	item = {
 		title = L["Item"],
 		justifyH = "LEFT",
@@ -128,6 +137,8 @@ function AuctionScrollTable:__init(colInfo)
 	self._marketValueFunc = nil
 	self._rowScoreFunc = nil
 	self._rowFilterFunc = nil
+	self._rowFavoriteFunc = nil
+	self._rowFavoriteChangedFunc = nil
 	self._isPlayerFunc = nil
 	self._expanded = {}
 	self._rawData = {} ---@type AuctionRow|AuctionSubRow[]
@@ -155,6 +166,10 @@ function AuctionScrollTable:Release()
 	self._auctionScan = nil
 	self._marketValueFunc = nil
 	self._isPlayerFunc = nil
+	self._rowScoreFunc = nil
+	self._rowFilterFunc = nil
+	self._rowFavoriteFunc = nil
+	self._rowFavoriteChangedFunc = nil
 	wipe(self._expanded)
 	wipe(self._rawData)
 	wipe(self._rowByItem)
@@ -240,6 +255,25 @@ function AuctionScrollTable:SetRowFilterFunction(func)
 		self._rowFilterFunc = func
 		self:_UpdateData()
 	end
+	return self
+end
+
+---Sets the function used to check if a row is favorited.
+---@param func fun(row: AuctionRow|AuctionSubRow): boolean The function
+---@return AuctionScrollTable
+function AuctionScrollTable:SetRowFavoriteFunction(func)
+	if func ~= self._rowFavoriteFunc then
+		self._rowFavoriteFunc = func
+		self:_UpdateData()
+	end
+	return self
+end
+
+---Sets the function called when a row favorite state changes.
+---@param func fun(row: AuctionRow|AuctionSubRow, isFavorite: boolean) The function
+---@return AuctionScrollTable
+function AuctionScrollTable:SetRowFavoriteChangedFunction(func)
+	self._rowFavoriteChangedFunc = func
 	return self
 end
 
@@ -649,6 +683,9 @@ end
 function AuctionScrollTable.__protected:_SetDataForRow(index, row, isFirstSubRow)
 	local baseItemString = row:GetBaseItemString()
 	self._data.baseItemString[index] = baseItemString
+	if self._data.favorite then
+		self._data.favorite[index] = self:_IsRowFavorite(row) and TextureAtlas.GetTextureLink(FAVORITE_TEXTURE) or ""
+	end
 	if row:IsSubRow() then
 		local itemLink, rawLink = row:GetLinks()
 		local itemTexturePrefix = "|T"..ItemInfo.GetTexture(itemLink)..":0|t "
@@ -874,6 +911,8 @@ function AuctionScrollTable.__protected:_GetSortValue(row, id, isAscending)
 		return ItemInfo.GetItemLevel(row:GetItemString() or row:GetBaseItemString())
 	elseif id == "score" then
 		return self:_GetRowScore(row) or (isAscending and math.huge or -math.huge)
+	elseif id == "favorite" then
+		return self:_IsRowFavorite(row) and 1 or 0
 	elseif id == "posts" then
 		local _, numAuctions = row:GetQuantities()
 		return numAuctions or (isAscending and math.huge or -math.huge)
@@ -1100,7 +1139,7 @@ function AuctionScrollTable.__protected:_HandleRowDraw(row)
 
 	if isExpanded and not self:_IsFirstSubRow(dataIndex) then
 		expander:Hide()
-		text:SetPoint("LEFT", self._header.moreButton:GetWidth() + colSpacing * 1.5 + INDENT_WIDTH, 0)
+		text:SetPoint("LEFT", self:_GetItemLeftOffset() + INDENT_WIDTH, 0)
 		itemWidthReduction = itemWidthReduction + INDENT_WIDTH
 	else
 		if numSubRows > 1 then
@@ -1121,9 +1160,12 @@ function AuctionScrollTable.__protected:_HandleRowDraw(row)
 		local width = badge:GetUnboundedStringWidth()
 		badge:SetWidth(width)
 		itemWidthReduction = itemWidthReduction + width + ICON_SPACING
+		local foundItemCol = false
 		for _, colSettings in ipairs(self:_GetSettingsValue().cols) do
 			local id = colSettings.id
-			if id ~= "item" and not colSettings.hidden then
+			if id == "item" then
+				foundItemCol = true
+			elseif foundItemCol and not colSettings.hidden then
 				row:GetText(id):SetPoint("LEFT", badge, "RIGHT", colSpacing, 0)
 				break
 			end
@@ -1163,11 +1205,30 @@ function AuctionScrollTable.__protected:_DrawRunningIcon(row)
 end
 
 ---@param row ListRow
+function AuctionScrollTable.__protected:_HandleRowEnter(row)
+	local favorite = self:_HasFavoriteColumn() and row:GetText("favorite") or nil
+	if favorite and self._data.favorite[row:GetDataIndex()] == "" then
+		favorite:SetText(TextureAtlas.GetTextureLink(NON_FAVORITE_TEXTURE))
+	end
+end
+
+---@param row ListRow
+function AuctionScrollTable.__protected:_HandleRowLeave(row)
+	local favorite = self:_HasFavoriteColumn() and row:GetText("favorite") or nil
+	if favorite then
+		favorite:SetText(self._data.favorite[row:GetDataIndex()] or "")
+	end
+end
+
+---@param row ListRow
 function AuctionScrollTable.__protected:_HandleRowClick(row, mouseButton)
 	local dataIndex = row:GetDataIndex()
 	local expander = row:GetTexture("expander")
 	if expander:IsVisible() and expander:IsMouseOver() then
 		self:_SetExpanded(dataIndex, not self._expanded[self._data.baseItemString[dataIndex]])
+		return
+	elseif self:_HasFavoriteColumn() and row:GetText("favorite"):IsMouseOver() then
+		self:_ToggleFavorite(dataIndex)
 		return
 	elseif mouseButton ~= "LeftButton" or self._selectionDisabled then
 		return
@@ -1191,6 +1252,54 @@ function AuctionScrollTable.__protected:_HandleHeaderCellClick(button, mouseButt
 		return
 	end
 	self:_UpdateData()
+end
+
+---@param row AuctionRow|AuctionSubRow
+function AuctionScrollTable.__private:_IsRowFavorite(row)
+	return self._rowFavoriteFunc and self._rowFavoriteFunc(row) or false
+end
+
+function AuctionScrollTable.__private:_HasFavoriteColumn()
+	for _, colSettings in ipairs(self:_GetSettingsValue().cols) do
+		if colSettings.id == "favorite" and not colSettings.hidden then
+			return true
+		end
+	end
+	return false
+end
+
+function AuctionScrollTable.__private:_ToggleFavorite(dataIndex)
+	if not self._rowFavoriteChangedFunc then
+		return
+	end
+	local row = self._rawData[dataIndex]
+	local isFavorite = not self:_IsRowFavorite(row)
+	self._rowFavoriteChangedFunc(row, isFavorite)
+	local firstIndex = nil
+	for i, data in ipairs(self._rawData) do
+		if data:GetBaseItemString() == row:GetBaseItemString() then
+			firstIndex = firstIndex or i
+			self:_SetDataForRow(i, data, i == firstIndex)
+		end
+	end
+	self:_DrawRows()
+	local listRow = self:_GetRow(dataIndex)
+	if listRow and listRow:IsHovering() then
+		self:_HandleRowEnter(listRow)
+	end
+end
+
+function AuctionScrollTable.__private:_GetItemLeftOffset()
+	local colSpacing = Theme.GetColSpacing()
+	local offset = self._header.moreButton:GetWidth() + colSpacing * 1.5
+	for _, colSettings in ipairs(self:_GetSettingsValue().cols) do
+		if colSettings.id == "item" then
+			break
+		elseif not colSettings.hidden then
+			offset = offset + colSettings.width + colSpacing
+		end
+	end
+	return offset
 end
 
 

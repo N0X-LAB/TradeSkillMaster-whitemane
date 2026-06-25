@@ -115,7 +115,7 @@ function private.CheckMerchantSale(bag, slot, onSelf)
 end
 
 function private.OnMerchantBuy(index, quantity)
-	local price, batchQuantity = MerchantAPI.GetItemInfo(index)
+	local _, price, batchQuantity = MerchantAPI.GetItemInfo(index)
 	local itemString = ItemString.Get(MerchantAPI.GetItemLink(index))
 	if not itemString or not price or price <= 0 then
 		return

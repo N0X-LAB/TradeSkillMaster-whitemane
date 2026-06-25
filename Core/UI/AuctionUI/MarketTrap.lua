@@ -8,15 +8,20 @@ local TSM = select(2, ...) ---@type TSM
 local MarketTrap = TSM.UI.AuctionUI:NewPackage("MarketTrap") ---@type AddonPackage
 local L = TSM.Locale.GetTable()
 local TextureAtlas = TSM.LibTSMService:Include("UI.TextureAtlas")
+local Theme = TSM.LibTSMService:Include("UI.Theme")
+local ItemInfo = TSM.LibTSMService:Include("Item.ItemInfo")
+local Tooltip = TSM.LibTSMUI:Include("Tooltip")
 local PlayerInfo = TSM.LibTSMApp:Include("Service.PlayerInfo")
 local UIElements = TSM.LibTSMUI:Include("Util.UIElements")
 local UIUtils = TSM.LibTSMUI:Include("Util.UIUtils")
+local TempTable = TSM.LibTSMUtil:Include("BaseType.TempTable")
 local Reactive = TSM.LibTSMUtil:Include("Reactive")
 local UIManager = TSM.LibTSMUtil:IncludeClassType("UIManager")
 local AuctionBuyScan = TSM.LibTSMUI:IncludeClassType("AuctionBuyScan")
 local private = {
 	auctionBuyScan = nil,
 	manager = nil,
+	state = nil,
 	settings = nil,
 	selectedGroups = {},
 	updateCallbacks = {},
@@ -29,10 +34,78 @@ local STATE_SCHEMA = Reactive.CreateStateSchema("MARKET_TRAP_UI_STATE")
 	:AddStringField("contentPath", "selection")
 	:AddStringField("searchName", "")
 	:AddBooleanField("groupSelectionCleared", true)
+	:AddBooleanField("hasFavoriteTraps", false)
+	:AddBooleanField("favoriteScanOnly", false)
 	:AddStringField("candidateText", "")
 	:AddStringField("executeText", "")
 	:AddBooleanField("candidateIsValid", false)
 	:Commit()
+local FavoriteList = UIElements.Define("MarketTrapFavoriteList", "List")
+local FAVORITE_LIST_ROW_HEIGHT = 20
+
+function FavoriteList:__init()
+	self.__super:__init()
+	self._itemStrings = {}
+	self._status = {}
+end
+
+function FavoriteList:Acquire()
+	self.__super:Acquire(FAVORITE_LIST_ROW_HEIGHT)
+	self:UpdateData()
+end
+
+function FavoriteList:Release()
+	wipe(self._itemStrings)
+	wipe(self._status)
+	self.__super:Release()
+end
+
+function FavoriteList:UpdateData()
+	wipe(self._itemStrings)
+	wipe(self._status)
+	for itemString in TSM.MarketTrap.FavoriteIterator() do
+		tinsert(self._itemStrings, itemString)
+		self._status[itemString] = TSM.MarketTrap.IsFavoriteActive(itemString) and L["Active"] or L["Inactive"]
+	end
+	sort(self._itemStrings)
+	self:_SetNumRows(#self._itemStrings)
+	self:Draw()
+end
+
+---@param row ListRow
+function FavoriteList.__protected:_HandleRowAcquired(row)
+	local colSpacing = Theme.GetColSpacing()
+	local status = row:AddText("status")
+	status:SetHeight(FAVORITE_LIST_ROW_HEIGHT)
+	status:TSMSetFont("TABLE_TABLE1")
+	status:SetJustifyH("RIGHT")
+	status:SetPoint("RIGHT", -colSpacing, 0)
+	status:SetWidth(78)
+	local item = row:AddText("item")
+	item:SetHeight(FAVORITE_LIST_ROW_HEIGHT)
+	item:TSMSetFont("ITEM_BODY3")
+	item:SetJustifyH("LEFT")
+	item:SetPoint("LEFT", colSpacing / 2, 0)
+	item:SetPoint("RIGHT", status, "LEFT", -colSpacing, 0)
+end
+
+---@param row ListRow
+function FavoriteList.__protected:_HandleRowDraw(row)
+	local itemString = self._itemStrings[row:GetDataIndex()]
+	local itemName = UIUtils.GetDisplayItemName(itemString) or ItemInfo.GetName(itemString) or itemString
+	row:GetText("item"):SetText("|T"..(ItemInfo.GetTexture(itemString) or 0)..":0|t "..itemName)
+	local status = self._status[itemString]
+	row:GetText("status"):SetText((status == L["Active"] and Theme.GetColor("FEEDBACK_GREEN") or Theme.GetColor("TEXT_ALT")):ColorText(status))
+end
+
+---@param row ListRow
+function FavoriteList.__protected:_HandleRowEnter(row)
+	row:ShowTooltip(self._itemStrings[row:GetDataIndex()])
+end
+
+function FavoriteList.__protected:_HandleRowLeave()
+	Tooltip.Hide()
+end
 
 
 
@@ -47,6 +120,7 @@ function MarketTrap.OnInitialize(settingsDB)
 		:AddKey("char", "auctionUIContext", "marketTrapGroupTree")
 
 	local state = STATE_SCHEMA:CreateState()
+	private.state = state
 	private.manager = UIManager.Create("MARKET_TRAP", state, private.ActionHandler)
 	private.auctionBuyScan = AuctionBuyScan.NewBrose(L["Market Trap"], PlayerInfo.AuctionOwnerIsPlayer, nil, nil, nil, TSM.MarketTrap.GetPostQuantity)
 
@@ -112,6 +186,13 @@ function private.GetSelectionFrame(state)
 		:SetBackgroundColor("PRIMARY_BG")
 		:SetLeftChild(UIElements.New("Frame", "groupSelection")
 			:SetLayout("VERTICAL")
+			:AddChild(UIElements.New("ActionButton", "favoriteTrapsBtn")
+				:SetHeight(24)
+				:SetMargin(8, 8, 8, 0)
+				:SetText(L["Favorite Traps"])
+				:SetDisabledPublisher(state:PublisherForKeyChange("hasFavoriteTraps"):InvertBoolean())
+				:SetAction("OnClick", "ACTION_START_FAVORITE_SCAN")
+			)
 			:AddChild(UIElements.New("ApplicationGroupTreeWithControls", "groupTree")
 				:SetOperationType("Shopping")
 				:SetSettingsContext(private.settings, "marketTrapGroupTree")
@@ -139,6 +220,7 @@ function private.GetSelectionFrame(state)
 		)
 		:SetRightChild(private.GetOverviewFrame(state))
 	state.groupSelectionCleared = frame:GetElement("groupSelection.groupTree"):IsSelectionCleared()
+	state.hasFavoriteTraps = TSM.MarketTrap.GetNumFavorites() > 0
 	return frame
 end
 
@@ -148,25 +230,26 @@ function private.GetOverviewFrame(state)
 		:SetLayout("VERTICAL")
 		:SetPadding(16)
 		:SetBackgroundColor("PRIMARY_BG_ALT")
-		:AddChild(private.CreateHeading("discoveryHeading", L["Discovery Scan"]))
-		:AddChild(UIElements.New("Text", "discoveryText")
-			:SetHeight(42)
-			:SetMargin(0, 0, 0, 16)
-			:SetFont("BODY_BODY2")
-			:SetText(L["Scans the selected groups and surfaces items with low auction count and low available quantity."])
+		:AddChild(private.CreateHeading("favoritesHeading", L["Favorite Traps"]))
+		:AddChild(UIElements.New("Frame", "header")
+			:SetLayout("HORIZONTAL")
+			:SetHeight(22)
+			:SetMargin(0, 0, 0, 4)
+			:AddChild(UIElements.New("Text", "item")
+				:SetHeight(18)
+				:SetFont("BODY_BODY3_MEDIUM")
+				:SetText(L["Item"])
+			)
+			:AddChild(UIElements.New("Text", "status")
+				:SetWidth(80)
+				:SetHeight(18)
+				:SetFont("BODY_BODY3_MEDIUM")
+				:SetJustifyH("RIGHT")
+				:SetText(L["Status"])
+			)
 		)
-		:AddChild(private.CreateHeading("reviewHeading", L["Candidate Review"]))
-		:AddChild(UIElements.New("Text", "reviewText")
-			:SetHeight(42)
-			:SetMargin(0, 0, 0, 16)
-			:SetFont("BODY_BODY2")
-			:SetText(L["Select a result after the discovery scan to review its score, limits, and target repost price."])
-		)
-		:AddChild(private.CreateHeading("executeHeading", L["Controlled Execute"]))
-		:AddChild(UIElements.New("Text", "executeText")
-			:SetHeight(64)
-			:SetFont("BODY_BODY2")
-			:SetText(L["Validated candidates use the existing Browse buy and post controls so every purchase and repost stays under TSM and Auction House confirmation."])
+		:AddChild(UIElements.New("MarketTrapFavoriteList", "favorites")
+			:SetBackgroundColor("PRIMARY_BG_ALT")
 		)
 end
 
@@ -217,7 +300,9 @@ function private.GetScanFrame(state)
 				:SetCreatedGroupName(L["Market Trap"].." - "..state.searchName)
 				:SetBrowseResultsVisible(true)
 				:SetRowScoreFunction(TSM.MarketTrap.GetRowScore)
-				:SetRowFilterFunction(TSM.MarketTrap.ShouldShowRow)
+				:SetRowFilterFunction(state.favoriteScanOnly and TSM.MarketTrap.ShouldShowFavoriteRow or TSM.MarketTrap.ShouldShowRow)
+				:SetRowFavoriteFunction(private.IsRowFavorite)
+				:SetRowFavoriteChangedFunction(private.SetRowFavorite)
 				:SetIsPlayerFunction(PlayerInfo.AuctionOwnerIsPlayer)
 			)
 			:SetRightChild(private.GetReviewPanel(state))
@@ -306,7 +391,11 @@ function private.ActionHandler(manager, state, action, ...)
 	elseif action == "ACTION_GROUP_SELECTION_CHANGED" then
 		state.groupSelectionCleared = state.frame:GetElement("selection.groupSelection.groupTree"):IsSelectionCleared()
 	elseif action == "ACTION_START_DISCOVERY_SCAN" then
+		state.favoriteScanOnly = false
 		manager:ProcessAction("ACTION_START_SEARCH", private.GetGroupSearchContext(state))
+	elseif action == "ACTION_START_FAVORITE_SCAN" then
+		state.favoriteScanOnly = true
+		manager:ProcessAction("ACTION_START_SEARCH", private.GetFavoriteSearchContext())
 	elseif action == "ACTION_START_SEARCH" then
 		local searchContext = ...
 		state.frame:SetPath("selection", true)
@@ -336,6 +425,7 @@ function private.ActionHandler(manager, state, action, ...)
 		state.candidateText = ""
 		state.executeText = ""
 		state.candidateIsValid = false
+		state.favoriteScanOnly = false
 		state.frame:SetPath("selection", true)
 		private.auctionBuyScan:EndSearch()
 	elseif action == "ACTION_REVIEW_CANDIDATE" then
@@ -371,4 +461,31 @@ function private.GetGroupSearchContext(state)
 	local searchContext = TSM.Shopping.GroupSearch.GetSearchContext(private.selectedGroups)
 	assert(searchContext)
 	return searchContext
+end
+
+function private.GetFavoriteSearchContext()
+	local filterList = TempTable.Acquire()
+	for itemString in TSM.MarketTrap.FavoriteIterator() do
+		local itemName = ItemInfo.GetName(itemString)
+		if itemName then
+			tinsert(filterList, itemName.."/exact")
+		end
+	end
+	local searchContext = #filterList > 0 and TSM.Shopping.FilterSearch.GetSearchContext(table.concat(filterList, ";")) or nil
+	TempTable.Release(filterList)
+	return searchContext
+end
+
+function private.IsRowFavorite(row)
+	local itemString = row:GetItemString() or row:GetBaseItemString()
+	return itemString and TSM.MarketTrap.IsFavorite(itemString) or false
+end
+
+function private.SetRowFavorite(row, isFavorite)
+	local itemString = row:GetItemString() or row:GetBaseItemString()
+	if not itemString then
+		return
+	end
+	TSM.MarketTrap.SetFavorite(itemString, isFavorite)
+	private.state.hasFavoriteTraps = TSM.MarketTrap.GetNumFavorites() > 0
 end

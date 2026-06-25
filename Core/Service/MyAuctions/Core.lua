@@ -123,6 +123,13 @@ function MyAuctions.GetNumPending()
 	end
 end
 
+function MyAuctions.IsItemPosted(itemString)
+	return Auction.NewIndexQuery()
+		:Equal("itemString", itemString)
+		:Equal("isSold", false)
+		:CountAndRelease() > 0
+end
+
 
 
 -- ============================================================================

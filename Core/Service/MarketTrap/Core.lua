@@ -44,6 +44,7 @@ function MarketTrap.OnInitialize(settingsDB)
 		:AddKey("global", "marketTrapOptions", "showBelowMinScore")
 		:AddKey("global", "marketTrapOptions", "ignoreNoSaleData")
 		:AddKey("global", "marketTrapOptions", "requireConfirmation")
+		:AddKey("global", "userData", "marketTrapFavorites")
 end
 
 function MarketTrap.ResetExecuteSession()
@@ -132,6 +133,34 @@ function MarketTrap.GetPostQuantity(_, defaultQuantity)
 	return Math.Bound(private.settings.trapPostQuantity, 1, defaultQuantity or 1)
 end
 
+function MarketTrap.IsFavorite(itemString)
+	return private.settings.marketTrapFavorites[itemString] and true or false
+end
+
+function MarketTrap.SetFavorite(itemString, isFavorite)
+	if isFavorite then
+		private.settings.marketTrapFavorites[itemString] = true
+	else
+		private.settings.marketTrapFavorites[itemString] = nil
+	end
+end
+
+function MarketTrap.GetNumFavorites()
+	local numFavorites = 0
+	for _ in pairs(private.settings.marketTrapFavorites) do
+		numFavorites = numFavorites + 1
+	end
+	return numFavorites
+end
+
+function MarketTrap.FavoriteIterator()
+	return pairs(private.settings.marketTrapFavorites)
+end
+
+function MarketTrap.IsFavoriteActive(itemString)
+	return TSM.MyAuctions.IsItemPosted(itemString)
+end
+
 function MarketTrap.GetRowScore(row)
 	local candidate = MarketTrap.BuildCandidate(row)
 	return candidate and candidate.score or nil
@@ -143,6 +172,14 @@ function MarketTrap.ShouldShowRow(row)
 		return false
 	end
 	return private.settings.showBelowMinScore or candidate.score >= private.settings.minScore
+end
+
+function MarketTrap.ShouldShowFavoriteRow(row)
+	local candidate = MarketTrap.BuildCandidate(row)
+	if not candidate or not MarketTrap.IsFavorite(candidate.itemString) then
+		return false
+	end
+	return true
 end
 
 
