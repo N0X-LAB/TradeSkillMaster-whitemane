@@ -11,6 +11,7 @@ local L = TSM.Locale.GetTable()
 local ChatMessage = TSM.LibTSMService:Include("UI.ChatMessage")
 local Threading = TSM.LibTSMTypes:Include("Threading")
 local ItemInfo = TSM.LibTSMService:Include("Item.ItemInfo")
+local SessionInfo = TSM.LibTSMWoW:Include("Util.SessionInfo")
 local AuctionSearchContext = TSM.LibTSMService:IncludeClassType("AuctionSearchContext")
 local private = {
 	settings = nil,
@@ -18,6 +19,7 @@ local private = {
 	scanThreadId = nil,
 	searchContext = nil,
 }
+local MAX_SCAN_AGE = 60 * 60 * 12
 
 
 
@@ -45,18 +47,31 @@ end
 -- ============================================================================
 
 function private.ScanThread(auctionScan)
-	if TSM.AuctionDB.GetAppDataUpdateTimes() < time() - 60 * 60 * 12 then
+	local localPriceData = private.GetLocalPriceData()
+	local localScanTime = localPriceData and localPriceData.updateTime or 0
+	local auctionDBScanTime = TSM.AuctionDB.GetAppDataUpdateTimes()
+	if localScanTime < time() - MAX_SCAN_AGE and auctionDBScanTime < time() - MAX_SCAN_AGE then
 		ChatMessage.PrintUser(L["No recent AuctionDB scan data found."])
 		return false
 	end
 
 	-- create the list of items
 	wipe(private.itemList)
-	for itemString, minBuyout in TSM.AuctionDB.LastScanIteratorThreaded() do
-		if minBuyout and private.ShouldInclude(itemString, minBuyout) then
-			tinsert(private.itemList, itemString)
+	if localScanTime >= auctionDBScanTime then
+		for itemString, data in pairs(localPriceData.items) do
+			local minBuyout = data.minBuyout
+			if minBuyout and private.ShouldInclude(itemString, minBuyout) then
+				tinsert(private.itemList, itemString)
+			end
+			Threading.Yield()
 		end
-		Threading.Yield()
+	else
+		for itemString, minBuyout in TSM.AuctionDB.LastScanIteratorThreaded() do
+			if minBuyout and private.ShouldInclude(itemString, minBuyout) then
+				tinsert(private.itemList, itemString)
+			end
+			Threading.Yield()
+		end
 	end
 
 	-- run the scan
@@ -106,4 +121,16 @@ end
 
 function private.MarketValueFunction(row)
 	return CustomString.GetSourceValue("Destroy", row:GetItemString() or row:GetBaseItemString())
+end
+
+function private.GetLocalPriceData()
+	-- luacheck: globals TSMLocalPriceDB
+	if type(TSMLocalPriceDB) ~= "table" or type(TSMLocalPriceDB.realms) ~= "table" then
+		return nil
+	end
+	local data = TSMLocalPriceDB.realms[SessionInfo.GetRealmName()]
+	if type(data) ~= "table" or type(data.items) ~= "table" then
+		return nil
+	end
+	return data
 end

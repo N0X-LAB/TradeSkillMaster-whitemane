@@ -76,10 +76,10 @@ function FilterSearch.GetGreatDealsSearchContext(filterStr)
 	return private.searchContext:SetScanContext(L["Great Deals Search"], filterStr, nil, L["Market Value"])
 end
 
-function FilterSearch.GetSearchContext(filterStr, itemInfo, commodityOnly, skipSave)
+function FilterSearch.GetSearchContext(filterStr, itemInfo, commodityOnly, skipSave, mode)
 	local errMsg = nil
 	local origFilterStr = filterStr
-	filterStr, errMsg = private.ValidateFilterStr(filterStr, "NORMAL")
+	filterStr, errMsg = private.ValidateFilterStr(filterStr, mode or "NORMAL")
 	if not filterStr then
 		if type(origFilterStr) == "string" then
 			ChatMessage.PrintUser(format(L["Invalid search filter (%s)."], origFilterStr).." "..errMsg)

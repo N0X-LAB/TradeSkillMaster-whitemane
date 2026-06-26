@@ -29,11 +29,22 @@ local private = {
 	itemPostContext = AuctionPostContext.New(),
 	updateCallbacks = {},
 }
+local SEARCH_MODE = {
+	NORMAL = "NORMAL",
+	CRAFTING = "CRAFTING",
+	DISENCHANT = "DISENCHANT",
+}
+local SEARCH_MODE_LABEL = {
+	[SEARCH_MODE.NORMAL] = "Normal",
+	[SEARCH_MODE.CRAFTING] = "Crafting",
+	[SEARCH_MODE.DISENCHANT] = "Disenchant",
+}
 local STATE_SCHEMA = Reactive.CreateStateSchema("SHOPPING_UI_STATE")
 	:AddOptionalTableField("frame")
 	:AddOptionalTableField("scanFrame")
 	:AddStringField("contentPath", "selection")
 	:AddStringField("searchName", "")
+	:AddStringField("searchMode", SEARCH_MODE.NORMAL)
 	:AddBooleanField("filterIsValid", ClientInfo.IsModernAuctionHouse())
 	:AddBooleanField("groupSelectionCleared", true)
 	:AddOptionalStringField("greatDealsFilter")
@@ -184,6 +195,34 @@ function private.GetSelectionContent(frame, path)
 			:SetLayout("VERTICAL")
 			:SetPadding(8, 8, 8, 0)
 			:SetBackgroundColor("PRIMARY_BG_ALT")
+			:AddChild(UIElements.New("Frame", "searchMode")
+				:SetLayout("HORIZONTAL")
+				:SetHeight(20)
+				:SetMargin(0, 0, 0, 8)
+				:AddChild(UIElements.New("Button", "normal")
+					:SetWidth("AUTO")
+					:SetMargin(0, 16, 0, 0)
+					:SetFont("BODY_BODY1_BOLD")
+					:SetText(SEARCH_MODE_LABEL[SEARCH_MODE.NORMAL])
+					:SetTextColor(state.searchMode == SEARCH_MODE.NORMAL and "INDICATOR" or "TEXT_ALT")
+					:SetAction("OnClick", "ACTION_SET_SEARCH_MODE_NORMAL")
+				)
+				:AddChild(UIElements.New("Button", "crafting")
+					:SetWidth("AUTO")
+					:SetMargin(0, 16, 0, 0)
+					:SetFont("BODY_BODY1_BOLD")
+					:SetText(SEARCH_MODE_LABEL[SEARCH_MODE.CRAFTING])
+					:SetTextColor(state.searchMode == SEARCH_MODE.CRAFTING and "INDICATOR" or "TEXT_ALT")
+					:SetAction("OnClick", "ACTION_SET_SEARCH_MODE_CRAFTING")
+				)
+				:AddChild(UIElements.New("Button", "disenchant")
+					:SetWidth("AUTO")
+					:SetFont("BODY_BODY1_BOLD")
+					:SetText(SEARCH_MODE_LABEL[SEARCH_MODE.DISENCHANT])
+					:SetTextColor(state.searchMode == SEARCH_MODE.DISENCHANT and "INDICATOR" or "TEXT_ALT")
+					:SetAction("OnClick", "ACTION_SET_SEARCH_MODE_DISENCHANT")
+				)
+			)
 			:AddChild(UIElements.New("Frame", "header")
 				:SetLayout("HORIZONTAL")
 				:SetHeight(24)
@@ -398,14 +437,27 @@ function private.ActionHandler(manager, state, action, ...)
 	elseif action == "ACTION_START_DEALS_SEARCH" then
 		assert(state.greatDealsFilter)
 		manager:ProcessAction("ACTION_START_SEARCH", TSM.Shopping.FilterSearch.GetGreatDealsSearchContext(state.greatDealsFilter))
+	elseif action == "ACTION_SET_SEARCH_MODE_NORMAL" then
+		state.searchMode = SEARCH_MODE.NORMAL
+		private.UpdateSearchModeButtons(state)
+		private.UpdateFilterIsValid(state)
+	elseif action == "ACTION_SET_SEARCH_MODE_CRAFTING" then
+		state.searchMode = SEARCH_MODE.CRAFTING
+		private.UpdateSearchModeButtons(state)
+		private.UpdateFilterIsValid(state)
+	elseif action == "ACTION_SET_SEARCH_MODE_DISENCHANT" then
+		state.searchMode = SEARCH_MODE.DISENCHANT
+		private.UpdateSearchModeButtons(state)
+		private.UpdateFilterIsValid(state)
 	elseif action == "ACTION_FILTER_INPUT_CHANGED" then
-		local value = state.frame:GetElement("selection.content.search.header.filterInput"):GetValue()
-		state.filterIsValid = ClientInfo.IsModernAuctionHouse() or value ~= ""
+		private.UpdateFilterIsValid(state)
 	elseif action == "ACTION_START_FILTER_INPUT_SEARCH" then
 		local path = state.frame:GetPath()
 		local filter = nil
+		local mode = SEARCH_MODE.NORMAL
 		if path == "selection" then
 			filter = state.frame:GetElement("selection.content.search.header.filterInput"):GetValue()
+			mode = state.searchMode
 		elseif path == "scan" then
 			filter = state.frame:GetElement("scan.searchFrame.filterInput"):GetValue()
 		else
@@ -414,7 +466,7 @@ function private.ActionHandler(manager, state, action, ...)
 		if not ClientInfo.IsModernAuctionHouse() and filter == "" then
 			return
 		end
-		manager:ProcessAction("ACTION_START_SEARCH", TSM.Shopping.FilterSearch.GetSearchContext(filter))
+		manager:ProcessAction("ACTION_START_SEARCH", TSM.Shopping.FilterSearch.GetSearchContext(filter, nil, nil, nil, mode))
 	elseif action == "ACTION_START_SEARCH" then
 		local searchContext = ...
 		state.frame:SetPath("selection", true)
@@ -472,13 +524,13 @@ function private.GetLinkedItemSearchContext(state, name, itemLink)
 	local itemString = ItemString.Get(itemLink)
 	local baseItemString = ItemString.GetBaseFast(itemString)
 	local baseName = ItemInfo.GetName(baseItemString)
-	if itemString == baseItemString then
+	if itemString == baseItemString and state.searchMode == SEARCH_MODE.NORMAL then
 		baseName = baseName.."/exact"
 	end
 	state.frame:SetPath("selection")
 	state.frame:GetBaseElement():HideDialog()
 	private.itemPostContext:PopulateForItem(itemString)
-	return TSM.Shopping.FilterSearch.GetSearchContext(baseName, private.itemPostContext)
+	return TSM.Shopping.FilterSearch.GetSearchContext(baseName, private.itemPostContext, nil, nil, state.searchMode)
 end
 
 
@@ -486,6 +538,30 @@ end
 -- ============================================================================
 -- Private Helper Functions
 -- ============================================================================
+
+function private.UpdateSearchModeButtons(state)
+	if not state.frame or state.frame:GetPath() ~= "selection" or state.frame:GetElement("selection.content"):GetPath() ~= "search" then
+		return
+	end
+	local modeFrame = state.frame:GetElement("selection.content.search.searchMode")
+	modeFrame:GetElement("normal")
+		:SetTextColor(state.searchMode == SEARCH_MODE.NORMAL and "INDICATOR" or "TEXT_ALT")
+		:Draw()
+	modeFrame:GetElement("crafting")
+		:SetTextColor(state.searchMode == SEARCH_MODE.CRAFTING and "INDICATOR" or "TEXT_ALT")
+		:Draw()
+	modeFrame:GetElement("disenchant")
+		:SetTextColor(state.searchMode == SEARCH_MODE.DISENCHANT and "INDICATOR" or "TEXT_ALT")
+		:Draw()
+end
+
+function private.UpdateFilterIsValid(state)
+	if not state.frame or state.frame:GetPath() ~= "selection" or state.frame:GetElement("selection.content"):GetPath() ~= "search" then
+		return
+	end
+	local value = state.frame:GetElement("selection.content.search.header.filterInput"):GetValue()
+	state.filterIsValid = (state.searchMode == SEARCH_MODE.NORMAL and ClientInfo.IsModernAuctionHouse()) or value ~= ""
+end
 
 function private.IsPlayer(character, includeAlts)
 	if includeAlts then

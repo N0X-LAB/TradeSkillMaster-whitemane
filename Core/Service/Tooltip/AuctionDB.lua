@@ -9,6 +9,7 @@ local AuctionDB = TSM.Tooltip:NewPackage("AuctionDB")
 local L = TSM.Locale.GetTable()
 local ItemString = TSM.LibTSMTypes:Include("Item.ItemString")
 local ClientInfo = TSM.LibTSMWoW:Include("Util.ClientInfo")
+local CustomString = TSM.LibTSMTypes:Include("CustomString")
 local Theme = TSM.LibTSMService:Include("UI.Theme")
 local TextureAtlas = TSM.LibTSMService:Include("UI.TextureAtlas")
 local Math = TSM.LibTSMUtil:Include("Lua.Math")
@@ -17,6 +18,12 @@ local private = {
 	altRealm = nil,
 }
 local DATA_OLD_THRESHOLD_SECONDS = 12 * 60 * 60
+local REALM_CUSTOM_SOURCE_LOOKUP = {
+	minBuyout = "dbminbuyout",
+	marketValueRecent = "dbrecent",
+	marketValue = "dbmarket",
+	historical = "dbhistorical",
+}
 local REALM_INFO = {
 	{ key = "minBuyout", default = true, label = L["Min Buyout"], format = "PRICE" },
 	{ key = "marketValueRecent", default = false, label = L["Recent Value"], format = "PRICE" },
@@ -186,6 +193,7 @@ function private.GetItemData(itemString, key)
 		key = strlower(firstLetter)..remainder
 		return TSM.AuctionDB.GetAltRealmItemData(itemString, key)
 	else
-		return TSM.AuctionDB.GetRealmItemData(itemString, key)
+		local customSource = REALM_CUSTOM_SOURCE_LOOKUP[key]
+		return customSource and CustomString.GetValue(customSource, itemString) or TSM.AuctionDB.GetRealmItemData(itemString, key)
 	end
 end
