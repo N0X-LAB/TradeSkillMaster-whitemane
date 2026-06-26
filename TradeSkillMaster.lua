@@ -32,12 +32,14 @@ local private = {
 }
 local LOCAL_PRICE_DATA_VERSION = 1
 local MARKET_VALUE_MIN_BUYOUT_CAP = 3
-local MARKET_VALUE_HALF_LIFE = 24 * 60 * 60
-local MARKET_VALUE_MAX_WEIGHT = 0.05
+local MARKET_VALUE_OBSERVATION_INTERVAL = 60 * 60
+local MARKET_VALUE_HALF_LIFE = 7 * 24 * 60 * 60
+local MARKET_VALUE_MAX_WEIGHT = 0.10
 local MARKET_VALUE_SPIKE_THRESHOLD = 2
 local MARKET_VALUE_SPIKE_WEIGHT_MOD = 0.25
 local MARKET_VALUE_DIP_THRESHOLD = 0.5
 local MARKET_VALUE_DIP_WEIGHT_MOD = 0.5
+local MARKET_VALUE_RECENT_WINDOW_PCT = 0.50
 do
 	-- Basic module configuration
 	Log.SetLoggingToChatEnabled(TSM.LibTSMUtil.IsTestVersion())
@@ -262,10 +264,10 @@ function TSM.OnInitialize(settingsDB)
 			else
 				local auctionDBValue = TSM.AuctionDB.GetRealmItemData(itemString, key)
 				local localValue = private.GetLocalPrice(itemString, key)
-				if key == "marketValue" then
-					return auctionDBValue or localValue
-				else
+				if key == "marketValue" or key == "marketValueRecent" or key == "minBuyout" then
 					return localValue or auctionDBValue
+				else
+					return auctionDBValue or localValue
 				end
 			end
 		end
@@ -326,7 +328,7 @@ function private.GetLocalPriceData()
 end
 
 function private.GetLocalPrice(itemString, key)
-	if not itemString or (key ~= "marketValue" and key ~= "minBuyout") then
+	if not itemString or (key ~= "marketValue" and key ~= "marketValueRecent" and key ~= "minBuyout") then
 		return nil
 	end
 	local items = private.GetLocalPriceData().items
@@ -355,6 +357,29 @@ function private.CalculateLocalMarketValue(oldMarketValue, oldUpdateTime, scanMa
 	return floor((oldMarketValue * (1 - weight) + scanMarketValue * weight) + 0.5)
 end
 
+function private.CalculateScanMarketValue(scanData)
+	sort(scanData.prices, private.ScanPriceSort)
+	local targetQuantity = max(floor(scanData.totalQuantity * MARKET_VALUE_RECENT_WINDOW_PCT), 1)
+	local remainingQuantity = targetQuantity
+	local totalValue = 0
+	local totalQuantity = 0
+	for _, priceData in ipairs(scanData.prices) do
+		local quantity = min(priceData.quantity, remainingQuantity)
+		totalValue = totalValue + priceData.price * quantity
+		totalQuantity = totalQuantity + quantity
+		remainingQuantity = remainingQuantity - quantity
+		if remainingQuantity <= 0 then
+			break
+		end
+	end
+	local scanMarketValue = totalQuantity > 0 and (totalValue / totalQuantity) or scanData.minBuyout
+	return floor(min(scanMarketValue, scanData.minBuyout * MARKET_VALUE_MIN_BUYOUT_CAP) + 0.5)
+end
+
+function private.ScanPriceSort(a, b)
+	return a.price < b.price
+end
+
 function private.AuctionScanQueryDone(_, query)
 	wipe(private.localPriceScanTemp)
 	for _, row in query:BrowseResultsIterator() do
@@ -367,12 +392,12 @@ function private.AuctionScanQueryDone(_, query)
 				if itemString and itemBuyout and itemBuyout > 0 and quantity and quantity > 0 then
 					local data = private.localPriceScanTemp[itemString]
 					if not data then
-						data = { minBuyout = itemBuyout, totalValue = 0, totalQuantity = 0 }
+						data = { minBuyout = itemBuyout, totalQuantity = 0, prices = {} }
 						private.localPriceScanTemp[itemString] = data
 					end
 					data.minBuyout = min(data.minBuyout, itemBuyout)
-					data.totalValue = data.totalValue + itemBuyout * quantity
 					data.totalQuantity = data.totalQuantity + quantity
+					tinsert(data.prices, { price = itemBuyout, quantity = quantity })
 				end
 			end
 		end
@@ -382,16 +407,21 @@ function private.AuctionScanQueryDone(_, query)
 	local updateTime = time()
 	local didUpdate = false
 	for itemString, scanData in pairs(private.localPriceScanTemp) do
-		local scanMarketValue = scanData.totalValue / scanData.totalQuantity
-		scanMarketValue = min(scanMarketValue, scanData.minBuyout * MARKET_VALUE_MIN_BUYOUT_CAP)
+		local scanMarketValue = private.CalculateScanMarketValue(scanData)
 		local data = localPriceData.items[itemString]
 		if not data then
 			data = {}
 			localPriceData.items[itemString] = data
 		end
+		local marketValueUpdateTime = data.marketValueUpdateTime or data.updateTime
 		data.minBuyout = scanData.minBuyout
-		data.marketValue = private.CalculateLocalMarketValue(data.marketValue, data.updateTime, scanMarketValue, updateTime)
+		data.marketValueRecent = scanMarketValue
 		data.updateTime = updateTime
+		if not data.marketValue or updateTime - marketValueUpdateTime >= MARKET_VALUE_OBSERVATION_INTERVAL then
+			data.marketValue = private.CalculateLocalMarketValue(data.marketValue, marketValueUpdateTime, scanMarketValue, updateTime)
+			data.marketValueUpdateTime = updateTime
+			data.numMarketValueSamples = (data.numMarketValueSamples or 0) + 1
+		end
 		didUpdate = true
 	end
 	if not didUpdate then
@@ -400,4 +430,5 @@ function private.AuctionScanQueryDone(_, query)
 	localPriceData.updateTime = updateTime
 	CustomString.InvalidateCache("DBMarket")
 	CustomString.InvalidateCache("DBMinBuyout")
+	CustomString.InvalidateCache("DBRecent")
 end
