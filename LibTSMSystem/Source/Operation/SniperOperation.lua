@@ -21,7 +21,7 @@ local OPERATION_TYPE = "Sniper"
 ---@param localizedName string The localized operation type name
 function SniperOperation.Load(localizedName)
 	local operationType = Operation.NewType(OPERATION_TYPE, localizedName, 1)
-		:AddCustomStringSetting("belowPrice", "max(vendorsell, ifgt(DBRegionMarketAvg, 250000g, 0.8, ifgt(DBRegionMarketAvg, 100000g, 0.7, ifgt(DBRegionMarketAvg, 50000g, 0.6, ifgt(DBRegionMarketAvg, 25000g, 0.5, ifgt(DBRegionMarketAvg, 10000g, 0.4, ifgt(DBRegionMarketAvg, 5000g, 0.3, ifgt(DBRegionMarketAvg, 2000g, 0.2, ifgt(DBRegionMarketAvg, 1000g, 0.1, 0.05)))))))) * DBRegionMarketAvg)")
+		:AddCustomStringSetting("belowPrice", "max(vendorsell, 30% first(dbmarket, dbrecent, dbminbuyout))")
 	Operation.RegisterType(operationType)
 end
 

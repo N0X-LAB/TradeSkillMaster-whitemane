@@ -370,6 +370,9 @@ function AuctionBuyScan.__private:_ActionHandler(manager, state, action, ...)
 		manager:ProcessAction("ACTION_SET_SELECTED_AUCTION", nil)
 	elseif action == "ACTION_SET_SCROLL_TABLE" then
 		local auctionScrollTable = ...
+		if state.auctionScrollTable and state.auctionScrollTable ~= auctionScrollTable then
+			state.auctionScrollTable:SetAuctionScan(nil)
+		end
 		state.auctionScrollTable = auctionScrollTable
 		if not auctionScrollTable then
 			return manager:ProcessAction("ACTION_SET_SELECTED_AUCTION", nil)

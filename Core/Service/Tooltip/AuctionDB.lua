@@ -37,11 +37,11 @@ local ALT_REALM_INFO = {
 	{ key = "altHistorical", default = false, label = L["Historical Price"], format = "PRICE", isAltRealm = true },
 }
 local REGION_INFO = {
-	{ key = "regionMarketValue", default = "withTrend", label = L["Region Market Value Avg"], format = "PRICE", hasTrend = true },
+	{ key = "regionMarketValue", default = "none", label = L["Region Market Value Avg"], format = "PRICE", hasTrend = true },
 	{ key = "regionHistorical", default = false, label = L["Region Historical Price"], format = "PRICE" },
-	{ key = "regionSale", default = true, label = L["Region Sale Avg"], format = "PRICE" },
-	{ key = "regionSalePercent", default = true, label = L["Region Sale Rate"], format = "DECIMAL" },
-	{ key = "regionSoldPerDay", default = true, label = L["Region Avg Daily Sold"], format = "DECIMAL" },
+	{ key = "regionSale", default = false, label = L["Region Sale Avg"], format = "PRICE" },
+	{ key = "regionSalePercent", default = false, label = L["Region Sale Rate"], format = "DECIMAL" },
+	{ key = "regionSoldPerDay", default = false, label = L["Region Avg Daily Sold"], format = "DECIMAL" },
 }
 
 
@@ -146,6 +146,10 @@ function private.PopulateLineWithTrend(tooltip, itemString, info)
 			historical = private.GetItemData(itemString, "historical")
 		end
 		trend = marketValue and historical and Math.Round((marketValue - historical) * 100 / historical)
+		if not trend and not strmatch(info.key, "^region") and not strmatch(info.key, "^alt") then
+			local recentValue = private.GetItemData(itemString, "marketValueRecent")
+			trend = marketValue and recentValue and Math.Round((recentValue - marketValue) * 100 / marketValue)
+		end
 	end
 	if not value then
 		return
@@ -156,7 +160,7 @@ function private.PopulateLineWithTrend(tooltip, itemString, info)
 		local iconTextureKey = trend >= 0 and TextureAtlas.GetFlippedVerticallyKey("iconPack.12x12/Caret/Down") or "iconPack.12x12/Caret/Down"
 		local iconTextureStr = TextureAtlas.GetTextureLink(TextureAtlas.GetColoredKey(iconTextureKey, color))
 		trendStr = "["..iconTextureStr..Theme.GetColor(color):ColorText(abs(trend).."%").."]"
-	else
+	elseif strmatch(info.key, "^region") or strmatch(info.key, "^alt") then
 		trendStr = "[---]"
 	end
 	local label = info.label

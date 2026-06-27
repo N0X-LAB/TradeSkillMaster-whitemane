@@ -392,11 +392,12 @@ function private.AuctionScanQueryDone(_, query)
 				if itemString and itemBuyout and itemBuyout > 0 and quantity and quantity > 0 then
 					local data = private.localPriceScanTemp[itemString]
 					if not data then
-						data = { minBuyout = itemBuyout, totalQuantity = 0, prices = {} }
+						data = { minBuyout = itemBuyout, totalQuantity = 0, numAuctions = 0, prices = {} }
 						private.localPriceScanTemp[itemString] = data
 					end
 					data.minBuyout = min(data.minBuyout, itemBuyout)
 					data.totalQuantity = data.totalQuantity + quantity
+					data.numAuctions = data.numAuctions + numAuctions
 					tinsert(data.prices, { price = itemBuyout, quantity = quantity })
 				end
 			end
@@ -416,6 +417,7 @@ function private.AuctionScanQueryDone(_, query)
 		local marketValueUpdateTime = data.marketValueUpdateTime or data.updateTime
 		data.minBuyout = scanData.minBuyout
 		data.marketValueRecent = scanMarketValue
+		data.numAuctions = scanData.numAuctions
 		data.updateTime = updateTime
 		if not data.marketValue or updateTime - marketValueUpdateTime >= MARKET_VALUE_OBSERVATION_INTERVAL then
 			data.marketValue = private.CalculateLocalMarketValue(data.marketValue, marketValueUpdateTime, scanMarketValue, updateTime)

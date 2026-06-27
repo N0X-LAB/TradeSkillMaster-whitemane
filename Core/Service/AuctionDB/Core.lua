@@ -15,6 +15,7 @@ local ItemString = TSM.LibTSMTypes:Include("Item.ItemString")
 local Threading = TSM.LibTSMTypes:Include("Threading")
 local ItemInfo = TSM.LibTSMService:Include("Item.ItemInfo")
 local CustomString = TSM.LibTSMTypes:Include("CustomString")
+local SessionInfo = TSM.LibTSMWoW:Include("Util.SessionInfo")
 local AppHelper = TSM.LibTSMApp:Include("Service.AppHelper")
 local private = {
 	realmData = {},
@@ -30,6 +31,12 @@ local UPDATE_TIME_KEYS = {
 	AUCTIONDB_REGION_STAT = true,
 	AUCTIONDB_REGION_HISTORICAL = true,
 	AUCTIONDB_REGION_SALE = true,
+}
+local LOCAL_PRICE_KEY_LOOKUP = {
+	minBuyout = "minBuyout",
+	marketValue = "marketValue",
+	marketValueRecent = "marketValueRecent",
+	numAuctions = "numAuctions",
 }
 
 
@@ -72,12 +79,26 @@ function AuctionDB.OnEnable()
 end
 
 function AuctionDB.GetAppDataUpdateTimes()
-	return private.realmUpdateTime, private.regionUpdateTime
+	local localPriceData = private.GetLocalPriceData()
+	local localUpdateTime = localPriceData and localPriceData.updateTime or 0
+	return max(private.realmUpdateTime or 0, localUpdateTime), private.regionUpdateTime
 end
 
 function AuctionDB.LastScanIteratorThreaded()
 	wipe(private.lastScanTemp)
 	local minBuyoutData = private.realmData.minBuyout
+	local localPriceData = private.GetLocalPriceData()
+	if localPriceData and localPriceData.updateTime >= (private.realmUpdateTime or 0) then
+		for itemString, data in pairs(localPriceData.items) do
+			if data.minBuyout and data.minBuyout > 0 then
+				private.lastScanTemp[itemString] = data.minBuyout
+			end
+			Threading.Yield()
+		end
+		return pairs(private.lastScanTemp)
+	elseif not minBuyoutData then
+		return pairs(private.lastScanTemp)
+	end
 	local minBuyoutIndex = minBuyoutData.fieldLookup.minBuyout
 	assert(minBuyoutIndex)
 	local baseItems = Threading.AcquireSafeTempTable()
@@ -104,7 +125,9 @@ function AuctionDB.LastScanIteratorThreaded()
 end
 
 function AuctionDB.GetRealmItemData(itemString, key)
-	return private.GetItemDataHelper(private.realmData[key], key, itemString)
+	local result = private.GetItemDataHelper(private.realmData[key], key, itemString)
+	local localKey = LOCAL_PRICE_KEY_LOOKUP[key]
+	return result or (localKey and private.GetLocalPrice(itemString, localKey)) or nil
 end
 
 function AuctionDB.GetRegionItemData(itemString, key)
@@ -124,6 +147,25 @@ end
 -- ============================================================================
 -- Private Helper Functions
 -- ============================================================================
+
+function private.GetLocalPriceData()
+	-- luacheck: globals TSMLocalPriceDB
+	if type(TSMLocalPriceDB) ~= "table" or type(TSMLocalPriceDB.realms) ~= "table" then
+		return nil
+	end
+	local localPriceData = TSMLocalPriceDB.realms[SessionInfo.GetRealmName()]
+	return type(localPriceData) == "table" and type(localPriceData.items) == "table" and localPriceData or nil
+end
+
+function private.GetLocalPrice(itemString, key)
+	local localPriceData = private.GetLocalPriceData()
+	if not localPriceData or not itemString then
+		return nil
+	end
+	itemString = ItemString.ToLevel(itemString)
+	local data = localPriceData.items[itemString] or localPriceData.items[ItemString.GetBaseFast(itemString)]
+	return data and data[key] or nil
+end
 
 function private.LoadRegionRealmAppData(tbl, appData)
 	local maxUpdateTime = 0

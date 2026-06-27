@@ -209,10 +209,10 @@ function private.CreateMainFrame()
 		:AddPlayerGold(private.settings)
 		:AddSwitchButton(private.SwitchBtnOnClick)
 		:SetScript("OnHide", private.BaseFrameOnHide)
-	private.AddCancelCounter(frame)
 	if AppHelper.IsDesktopAppSupported() then
 		frame:AddAppStatusIcon(AppHelper.GetRegion(), AppHelper.GetLastSync(), TSM.AuctionDB.GetAppDataUpdateTimes())
 	end
+	private.AddCancelCounter(frame)
 	for _, info in ipairs(private.topLevelPages) do
 		frame:AddNavButton(info.name, info.callback)
 	end

@@ -207,6 +207,15 @@ function AuctionScrollTable:SetAuctionScan(auctionScan)
 		self._auctionScan:SetScript("OnCurrentSearchChanged", nil)
 	end
 	self._auctionScan = auctionScan
+	if not auctionScan then
+		wipe(self._expanded)
+		wipe(self._rawData)
+		wipe(self._rowByItem)
+		self._currentSearchItem = nil
+		self:_SetSelectedRow(nil, true)
+		self:_SetNumRows(0)
+		return self
+	end
 	auctionScan:AddResultsUpdateCallback(self:__closure("_UpdateData"))
 	auctionScan:SetNextSearchItemFunction(self:__closure("_GetNextSearchItem"))
 	auctionScan:SetScript("OnCurrentSearchChanged", self:__closure("_HandleCurrentSearchChanged"))
