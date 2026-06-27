@@ -47,7 +47,6 @@ local STATE_SCHEMA = Reactive.CreateStateSchema("SHOPPING_UI_STATE")
 	:AddStringField("searchMode", SEARCH_MODE.NORMAL)
 	:AddBooleanField("filterIsValid", ClientInfo.IsModernAuctionHouse())
 	:AddBooleanField("groupSelectionCleared", true)
-	:AddOptionalStringField("greatDealsFilter")
 	:Commit()
 
 
@@ -190,7 +189,6 @@ end
 function private.GetSelectionContent(frame, path)
 	local state = frame:GetContext() ---@type ShoppingUIState
 	if path == "search" then
-		state.greatDealsFilter = TSM.Shopping.GreatDealsSearch.GetFilter()
 		return UIElements.New("Frame", "search")
 			:SetLayout("VERTICAL")
 			:SetPadding(8, 8, 8, 0)
@@ -261,16 +259,8 @@ function private.GetSelectionContent(frame, path)
 				:SetLayout("HORIZONTAL")
 				:SetHeight(24)
 				:AddChild(UIElements.New("ActionButton", "disenchantBtn")
-					:SetMargin(0, 8, 0, 0)
 					:SetText(L["Disenchant Search"])
 					:SetAction("OnClick", "ACTION_START_DISENCHANT_SEARCH")
-				)
-				:AddChild(UIElements.New("ActionButton", "dealsBtn")
-					:SetText(L["Great Deals Search"])
-					:SetDisabledPublisher(state:PublisherForKeyChange("greatDealsFilter")
-						:MapBooleanEquals(nil)
-					)
-					:SetAction("OnClick", "ACTION_START_DEALS_SEARCH")
 				)
 			)
 			:AddChild(UIElements.New("TabGroup", "buttons")
@@ -434,9 +424,6 @@ function private.ActionHandler(manager, state, action, ...)
 		manager:ProcessAction("ACTION_START_SEARCH", TSM.Shopping.VendorSearch.GetSearchContext())
 	elseif action == "ACTION_START_DISENCHANT_SEARCH" then
 		manager:ProcessAction("ACTION_START_SEARCH", TSM.Shopping.DisenchantSearch.GetSearchContext())
-	elseif action == "ACTION_START_DEALS_SEARCH" then
-		assert(state.greatDealsFilter)
-		manager:ProcessAction("ACTION_START_SEARCH", TSM.Shopping.FilterSearch.GetGreatDealsSearchContext(state.greatDealsFilter))
 	elseif action == "ACTION_SET_SEARCH_MODE_NORMAL" then
 		state.searchMode = SEARCH_MODE.NORMAL
 		private.UpdateSearchModeButtons(state)
