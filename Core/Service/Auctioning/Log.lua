@@ -191,6 +191,8 @@ function private.GetResultText(result)
 		return L["At above max price and not undercut."]
 	elseif result == AuctioningOperation.RESULT.NOT_CANCELING.AT_WHITELIST then
 		return L["Posted at whitelisted player's price."]
+	elseif result == AuctioningOperation.RESULT.NOT_CANCELING.AT_IGNORED_SELLER then
+		return L["Top seller is ignored for canceling."]
 	elseif result == AuctioningOperation.RESULT.CANCELING.UNDERCUT then
 		return L["You've been undercut."]
 	elseif result == AuctioningOperation.RESULT.CANCELING_EXCESS.REPOST then

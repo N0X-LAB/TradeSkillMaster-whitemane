@@ -13,10 +13,14 @@ local UIUtils = TSM.LibTSMUI:Include("Util.UIUtils")
 local Reactive = TSM.LibTSMUtil:Include("Reactive")
 local UIManager = TSM.LibTSMUtil:IncludeClassType("UIManager")
 local AuctionBuyScan = TSM.LibTSMUI:IncludeClassType("AuctionBuyScan")
+local OpportunitiesViewContainer = UIElements.Define("OpportunitiesViewContainer", "ViewContainer")
+local TABLE_MIN_HEIGHT = 80
 local private = {
 	settings = nil,
 	manager = nil,
 	auctionBuyScan = nil,
+	lastTableHeight = nil,
+	scanTableInitialized = false,
 }
 local STATE_SCHEMA = Reactive.CreateStateSchema("OPPORTUNITIES_UI_STATE")
 	:AddOptionalTableField("frame")
@@ -57,7 +61,7 @@ function private.GetOpportunitiesFrame(state)
 	if not private.auctionBuyScan:GetSearchContext() then
 		state.contentPath = "selection"
 	end
-	local frame = UIElements.New("ViewContainer", "opportunities")
+	local frame = UIElements.New("OpportunitiesViewContainer", "opportunities")
 		:SetContext(state)
 		:SetNavCallback(private.GetContentFrame)
 		:AddPath("selection")
@@ -67,6 +71,11 @@ function private.GetOpportunitiesFrame(state)
 		:SetScript("OnHide", private.manager:CallbackToProcessAction("ACTION_FRAME_HIDDEN"))
 	state.frame = frame
 	return frame
+end
+
+function OpportunitiesViewContainer:_GetMinimumDimension(dimension)
+	local minimum = self._child and self._child:_GetMinimumDimension(dimension) or 0
+	return minimum, true
 end
 
 function private.GetContentFrame(viewContainer, path)
@@ -158,8 +167,23 @@ function private.GetScanFrame(state)
 end
 
 function private.ScanFrameOnUpdate(frame)
-	frame:SetScript("OnUpdate", nil)
-	private.auctionBuyScan:SetAuctionScrollTable(frame:GetElement("auctions"))
+	local auctions = frame:GetElement("auctions")
+	if not private.scanTableInitialized then
+		private.auctionBuyScan:SetAuctionScrollTable(auctions)
+		private.scanTableInitialized = true
+	end
+	private.UpdateAuctionTableHeight(frame, auctions)
+end
+
+function private.UpdateAuctionTableHeight(frame, auctions)
+	local height = floor(frame:_GetBaseFrame():GetHeight() - frame:GetElement("header"):_GetBaseFrame():GetHeight() - frame:GetElement("bottomLine"):_GetBaseFrame():GetHeight() - frame:GetElement("bottom"):_GetBaseFrame():GetHeight() + 0.5)
+	height = max(height, TABLE_MIN_HEIGHT)
+	if private.lastTableHeight == height then
+		return
+	end
+	private.lastTableHeight = height
+	auctions:SetHeight(height)
+	frame:Draw()
 end
 
 
@@ -175,6 +199,8 @@ function private.ActionHandler(manager, state, action, ...)
 		state.frame = nil
 	elseif action == "ACTION_SCAN_FRAME_HIDDEN" then
 		state.scanFrame = nil
+		private.scanTableInitialized = false
+		private.lastTableHeight = nil
 		private.auctionBuyScan:SetAuctionScrollTable(nil)
 	elseif action == "ACTION_START_SCAN" or action == "ACTION_RESCAN" then
 		manager:ProcessAction("ACTION_START_SEARCH", TSM.Opportunities.GetSearchContext())

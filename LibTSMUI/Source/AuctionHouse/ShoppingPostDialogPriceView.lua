@@ -223,7 +223,7 @@ function ShoppingPostDialogPriceView:Acquire()
 	self._state:PublisherForExpression([[stackSize and numStacks and (stackSize * numStacks) <= bagQuantity or false]])
 		:AssignToTableKey(self._state, "stackSizeIsValid")
 
-	if LibTSMUI.IsRetail() then
+	if LibTSMUI.IsModernAuctionHouse() then
 		self._state:PublisherForExpression([[bagQuantity > 5000 and 5000 or bagQuantity]])
 			:AssignToTableKey(self._state, "maxPostStack")
 	else

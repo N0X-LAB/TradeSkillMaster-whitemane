@@ -9,7 +9,8 @@ local private = {
 	data = nil,
 	callbacks = {},
 }
-local DEFAULT_THRESHOLD = 1000
+local MAX_THRESHOLD = 300
+local DEFAULT_THRESHOLD = MAX_THRESHOLD
 
 
 
@@ -34,11 +35,11 @@ function CancelTracker.GetCount()
 end
 
 function CancelTracker.GetThreshold()
-	return max(private.GetDB().threshold or DEFAULT_THRESHOLD, 1)
+	return min(max(private.GetDB().threshold or DEFAULT_THRESHOLD, 1), MAX_THRESHOLD)
 end
 
 function CancelTracker.SetThreshold(threshold)
-	threshold = max(tonumber(threshold) or DEFAULT_THRESHOLD, 1)
+	threshold = min(max(tonumber(threshold) or DEFAULT_THRESHOLD, 1), MAX_THRESHOLD)
 	private.GetDB().threshold = threshold
 	private.FireCallbacks()
 end
@@ -66,7 +67,7 @@ function private.GetDB()
 	-- luacheck: globals TSMCancelTrackerDB
 	TSMCancelTrackerDB = type(TSMCancelTrackerDB) == "table" and TSMCancelTrackerDB or {}
 	TSMCancelTrackerDB.show = TSMCancelTrackerDB.show ~= false
-	TSMCancelTrackerDB.threshold = max(tonumber(TSMCancelTrackerDB.threshold) or DEFAULT_THRESHOLD, 1)
+	TSMCancelTrackerDB.threshold = min(max(tonumber(TSMCancelTrackerDB.threshold) or DEFAULT_THRESHOLD, 1), MAX_THRESHOLD)
 	TSMCancelTrackerDB.count = tonumber(TSMCancelTrackerDB.count) or 0
 	TSMCancelTrackerDB.date = type(TSMCancelTrackerDB.date) == "string" and TSMCancelTrackerDB.date or ""
 	return TSMCancelTrackerDB

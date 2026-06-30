@@ -44,7 +44,8 @@ function Util.GetLowestAuction(subRows, itemString, operationSettings, resultTbl
 				resultTbl.seller = firstSeller
 				resultTbl.auctionId = auctionId
 				resultTbl.isWhitelist = false
-				resultTbl.isBlacklist = false
+				resultTbl.isBlacklist = AuctioningOperation.IsBlacklisted(operationSettings, firstSeller)
+				resultTbl.isCancelIgnoredSeller = AuctioningOperation.IsCancelIgnoredSeller(operationSettings, firstSeller)
 				resultTbl.isPlayer = numOwnerAuctions > 0
 				foundLowest = true
 			end
@@ -73,6 +74,7 @@ function Util.GetLowestAuction(subRows, itemString, operationSettings, resultTbl
 					temp.auctionId = auctionId
 					temp.isWhitelist = private.settings.whitelist[strlower(ownerStr)] and true or false
 					temp.isBlacklist = AuctioningOperation.IsBlacklisted(operationSettings, ownerStr)
+					temp.isCancelIgnoredSeller = AuctioningOperation.IsCancelIgnoredSeller(operationSettings, ownerStr)
 					temp.isPlayer = PlayerInfo.IsPlayer(ownerStr, true, true, true)
 					if not temp.isWhitelist and not temp.isPlayer then
 						-- there is a non-whitelisted competitor, so we don't care if a whitelisted competitor also posts at this price

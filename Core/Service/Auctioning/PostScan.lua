@@ -404,6 +404,8 @@ function private.PrintInvalidGroupError(itemString, errType, errArg, errArg2)
 	local itemLink = ItemInfo.GetLink(itemString)
 	if errType == AuctioningOperation.RESULT.INVALID.ITEM_GROUP.POST_CAP then
 		ChatMessage.PrintfUser(L["Did not post %s because your post cap (%s) is invalid. Check your settings."], itemLink, errArg)
+	elseif errType == AuctioningOperation.RESULT.INVALID.ITEM_GROUP.POST_SIZE then
+		ChatMessage.PrintfUser(L["Did not post %s because your post size (%s) is invalid. Check your settings."], itemLink, errArg)
 	elseif errType == AuctioningOperation.RESULT.INVALID.ITEM_GROUP.STACK_SIZE then
 		if errArg then
 			ChatMessage.PrintfUser(L["Did not post %s because your stack size (%s) is invalid. Check your settings."], itemLink, errArg)
@@ -516,7 +518,7 @@ function private.AuctionScanOnQueryDone(_, query)
 end
 
 function private.GeneratePosts(itemString, operationName, operationSettings, numHave, subRows)
-	local maxCanPost, perAuction, postCap = AuctioningOperation.GetPostQuantities(itemString, operationSettings, numHave)
+	local maxCanPost, perAuction, postCap, extraStack = AuctioningOperation.GetPostQuantities(itemString, operationSettings, numHave)
 	if not maxCanPost then
 		return AuctioningOperation.RESULT.NOT_POSTING.NOT_ENOUGH
 	end
@@ -527,6 +529,7 @@ function private.GeneratePosts(itemString, operationName, operationSettings, num
 		lowestAuction = nil
 	end
 	local reason, seller, bid, buyout, activeAuctionsBid, activeAuctionsBuyout = AuctioningOperation.MakePostDecision(itemString, lowestAuction, operationSettings, private.settings.matchWhitelist)
+	local postSizeIsForcedToOne = lowestAuction and lowestAuction.isBlacklist and not ClientInfo.HasFeature(ClientInfo.FEATURES.AH_STACKS)
 	if reason == AuctioningOperation.RESULT.INVALID.SELLER then
 		ChatMessage.PrintfUser(L["The seller name of the lowest auction for %s was not given by the server. Skipping this item."], ItemInfo.GetLink(itemString))
 	elseif reason == AuctioningOperation.RESULT.INVALID.ITEM_GROUP.ALT_BLACKLISTED then
@@ -539,6 +542,11 @@ function private.GeneratePosts(itemString, operationName, operationSettings, num
 	end
 	if reason ~= AuctioningOperation.RESULT.POSTING then
 		return reason, nil, nil, seller
+	end
+	if postSizeIsForcedToOne then
+		maxCanPost = (perAuction * maxCanPost) + (extraStack or 0)
+		perAuction = 1
+		extraStack = 0
 	end
 	local activeAuctions = 0
 	if activeAuctionsBid or activeAuctionsBuyout then
@@ -556,18 +564,27 @@ function private.GeneratePosts(itemString, operationName, operationSettings, num
 
 	-- Check if we can't post anymore
 	local queueQuery = private.queueDB:NewQuery()
-		:Select("numStacks")
+		:Select("stackSize", "numStacks")
 		:Equal("itemString", itemString)
-		:Equal("stackSize", perAuction)
 		:Equal("itemBuyout", buyout)
-	for _, numStacks in queueQuery:Iterator() do
-		activeAuctions = activeAuctions + numStacks
+	if ClientInfo.HasFeature(ClientInfo.FEATURES.AH_STACKS) then
+		queueQuery:Equal("stackSize", perAuction)
+	end
+	for _, queuedStackSize, numStacks in queueQuery:Iterator() do
+		activeAuctions = activeAuctions + (ClientInfo.HasFeature(ClientInfo.FEATURES.AH_STACKS) and numStacks or (queuedStackSize * numStacks))
 	end
 	queueQuery:Release()
 	if ClientInfo.HasFeature(ClientInfo.FEATURES.AH_STACKS) then
 		maxCanPost = min(postCap - activeAuctions, maxCanPost)
 	else
-		perAuction = min(postCap - activeAuctions, perAuction)
+		extraStack = extraStack or 0
+		local totalCanPost = min(postCap - activeAuctions, (perAuction * maxCanPost) + extraStack)
+		if totalCanPost <= 0 then
+			return AuctioningOperation.RESULT.POSTING_NOT_NEEDED.TOO_MANY
+		end
+		perAuction = min(totalCanPost, perAuction)
+		maxCanPost = floor(totalCanPost / perAuction)
+		extraStack = totalCanPost % perAuction
 	end
 	if maxCanPost <= 0 or perAuction <= 0 then
 		return AuctioningOperation.RESULT.POSTING_NOT_NEEDED.TOO_MANY
@@ -581,24 +598,19 @@ function private.GeneratePosts(itemString, operationName, operationSettings, num
 	-- Insert the posts into our DB
 	local auctionId = private.nextQueueAuctionId
 	local postTime, stackSizeIsCap = AuctioningOperation.GetPostSettings(operationSettings)
-	local extraStack = 0
+	extraStack = extraStack or 0
 	if ClientInfo.HasFeature(ClientInfo.FEATURES.AH_STACKS)  then
 		private.AddToQueue(itemString, operationName, bid, buyout, perAuction, maxCanPost, postTime)
 		-- Check if we can post an extra partial stack
 		extraStack = (maxCanPost < postCap and stackSizeIsCap and (numHave % perAuction)) or 0
 	else
-		assert(maxCanPost == 1)
 		if ItemInfo.IsCommodity(itemString) then
 			local maxPerAuction = ItemInfo.GetMaxStack(itemString) * MAX_COMMODITY_STACKS_PER_AUCTION
-			maxCanPost = floor(perAuction / maxPerAuction)
-			-- Check if we can post an extra partial stack
-			extraStack = perAuction % maxPerAuction
+			local totalToPost = (perAuction * maxCanPost) + extraStack
 			perAuction = min(perAuction, maxPerAuction)
+			maxCanPost = floor(totalToPost / perAuction)
+			extraStack = totalToPost % perAuction
 			bid = buyout
-		else
-			-- Post non-commodities as single stacks
-			maxCanPost = perAuction
-			perAuction = 1
 		end
 		assert(maxCanPost > 0 or extraStack > 0)
 		if maxCanPost > 0 then
@@ -660,6 +672,11 @@ function private.GetPostBagSlot(itemString, quantity)
 	end
 	local removeContext = TempTable.Acquire()
 	bag, slot = private.ItemBagSlotHelper(itemString, bag, slot, quantity, removeContext)
+	if not bag or not slot then
+		TempTable.Release(removeContext)
+		private.DebugLogInsert(itemString, "Failed to find available bag / slot")
+		return nil, nil
+	end
 
 	local bagItemString = ItemString.Get(Container.GetItemLink(bag, slot))
 	if not bagItemString or Group.TranslateItemString(bagItemString) ~= itemString then
@@ -751,7 +768,8 @@ function private.ItemBagSlotHelper(itemString, bag, slot, quantity, removeContex
 		:OrderBy("slotId", true)
 		:GetFirstResultAndRelease()
 	if not rowBag or not rowSlot then
-		private.ErrorForItem(itemString, "Failed to find next highest bag / slot")
+		private.DebugLogInsert(itemString, "Failed to find next highest bag / slot")
+		return nil, nil
 	end
 	return private.ItemBagSlotHelper(itemString, rowBag, rowSlot, quantity, removeContext)
 end
@@ -789,7 +807,7 @@ function private.ErrorForItem(itemString, errorStr)
 		end
 	end
 	Log.Info("Bag state:")
-	for _, slotId in Container.GetBagSlotIterator() do
+	for slotId in Container.GetBagSlotIterator() do
 		local bag, slot = SlotId.Split(slotId)
 		if ItemString.GetBase(Container.GetItemLink(bag, slot)) == itemString then
 			local stackSize = Container.GetStackCount(bag, slot)

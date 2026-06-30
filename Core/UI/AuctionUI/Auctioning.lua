@@ -537,7 +537,7 @@ function private.GetAuctioningScanFrame(state)
 				:SetTextPublisher(state:PublisherForKeys("canProcess", "scanType", "pausePending", "scanIsPaused", "scanNumItems", "statusNumConfirmed", "statusTotalNum", "statusNumProcessed")
 					:MapWithFunction(private.StateToProgressText)
 				)
-				:SetProgressPublisher(state:PublisherForExpression([[(not canProcess and scanProgress) or (statusTotalNum > 0 and (statusNumProcessed / statusTotalNum)) or 1]]))
+				:SetProgressPublisher(state:PublisherForExpression([[(not canProcess and scanProgress) or (statusTotalNum > 0 and (statusNumConfirmed / statusTotalNum)) or 1]]))
 				:SetProgressIconHiddenPublisher(state:PublisherForExpression([[canProcess and (statusNumConfirmed == statusTotalNum or (statusNumProcessed ~= statusTotalNum and statusNumProcessed == statusNumConfirmed))]]))
 			)
 			:AddChild(UIElements.NewNamed("ActionButton", "processBtn", "TSMAuctioningBtn")
@@ -1137,7 +1137,7 @@ function private.StateToProgressText(state)
 		end
 	elseif state.statusNumProcessed == state.statusTotalNum then
 		-- We're done processing and just confirming
-		return format(L["Confirming %d / %d"], state.statusNumConfirmed + 1, state.statusTotalNum)
+		return format(L["Confirming %d / %d"], min(state.statusNumConfirmed + 1, state.statusTotalNum), state.statusTotalNum)
 	else
 		-- We're done (or paused) scanning so start Posting/Canceling
 		local progressFmtStr = nil
@@ -1149,9 +1149,9 @@ function private.StateToProgressText(state)
 			error("Invalid scan type: "..tostring(state.scanType))
 		end
 		if state.statusNumProcessed == state.statusNumConfirmed then
-			return format(progressFmtStr, state.statusNumProcessed + 1, state.statusTotalNum)
+			return format(progressFmtStr, min(state.statusNumProcessed + 1, state.statusTotalNum), state.statusTotalNum)
 		else
-			return format(progressFmtStr.." ("..L["Confirming %d / %d"]..")", state.statusNumProcessed + 1, state.statusTotalNum, state.statusNumConfirmed + 1, state.statusTotalNum)
+			return format(progressFmtStr.." ("..L["Confirming %d / %d"]..")", min(state.statusNumConfirmed + 1, state.statusTotalNum), state.statusTotalNum, min(state.statusNumConfirmed + 1, state.statusTotalNum), state.statusTotalNum)
 		end
 	end
 end

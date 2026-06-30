@@ -303,7 +303,7 @@ function private.GetCancelCounterColor(count, threshold)
 		return "FEEDBACK_RED"
 	elseif pct >= 0.9 then
 		return "FEEDBACK_ORANGE"
-	elseif pct >= 0.7 then
+	elseif pct >= 0.8 then
 		return "FEEDBACK_YELLOW"
 	else
 		return "TEXT"

@@ -9,7 +9,6 @@ local L = TSM.Locale.GetTable()
 local ChatMessage = TSM.LibTSMService:Include("UI.ChatMessage")
 local Threading = TSM.LibTSMTypes:Include("Threading")
 local CustomString = TSM.LibTSMTypes:Include("CustomString")
-local Money = TSM.LibTSMUtil:Include("UI.Money")
 local Math = TSM.LibTSMUtil:Include("Lua.Math")
 local AuctionSearchContext = TSM.LibTSMService:IncludeClassType("AuctionSearchContext")
 local LibTSMClass = LibStub("LibTSMClass")
@@ -18,9 +17,8 @@ local private = {
 	settings = nil,
 	scanThreadId = nil,
 	searchContext = nil,
-	itemList = {},
-	itemScore = {},
 	maxQuantity = {},
+	numMatches = 0,
 }
 
 
@@ -53,7 +51,7 @@ end
 -- ============================================================================
 
 function OpportunitiesSearchContext.GetMaxCanBuy(self, itemString)
-	return private.maxQuantity[itemString]
+	return private.maxQuantity[itemString] or private.settings.maxBuyQuantity
 end
 
 function OpportunitiesSearchContext.OnBuy(self, itemString, quantity)
@@ -74,44 +72,13 @@ end
 -- ============================================================================
 
 function private.ScanThread(auctionScan)
-	local lastScanTime = TSM.AuctionDB.GetAppDataUpdateTimes()
-	if lastScanTime == 0 then
-		ChatMessage.PrintUser(L["No recent AuctionDB scan data found."])
-		return false
-	end
-
-	wipe(private.itemList)
-	wipe(private.itemScore)
 	wipe(private.maxQuantity)
+	private.numMatches = 0
 
-	local minMarketValue = Money.FromString(private.settings.minMarketValue) or 0
-	local maxPricePct = Math.Bound(private.settings.maxPricePct, 1, 1000) / 100
-	local minAuctions = max(private.settings.minAuctions, 0)
-	for itemString, minBuyout in TSM.AuctionDB.LastScanIteratorThreaded() do
-		local marketValue = private.GetMarketValue(itemString)
-		local numAuctions = TSM.AuctionDB.GetRealmItemData(itemString, "numAuctions") or 0
-		if minBuyout and minBuyout > 0 and marketValue and marketValue >= minMarketValue and numAuctions >= minAuctions and minBuyout <= marketValue * maxPricePct then
-			tinsert(private.itemList, itemString)
-			private.itemScore[itemString] = minBuyout / marketValue
-			private.maxQuantity[itemString] = private.settings.maxBuyQuantity
-		end
-		Threading.Yield()
-	end
-
-	if #private.itemList == 0 then
-		ChatMessage.PrintUser("No opportunities matched your current settings.")
-		return false
-	end
-
-	sort(private.itemList, private.ItemSort)
-	while #private.itemList > private.settings.maxCandidates do
-		private.maxQuantity[tremove(private.itemList)] = nil
-	end
-
-	auctionScan:AddItemListQueriesThreaded(private.itemList)
-	for _, query in auctionScan:QueryIterator() do
-		query:AddCustomFilter(private.QueryFilter)
-	end
+	auctionScan:NewQuery()
+		:SetStr("")
+		:SetIsBrowseDoneFunction(private.QueryIsBrowseDoneFunction)
+		:AddCustomFilter(private.QueryFilter)
 
 	if not auctionScan:ScanQueriesThreaded() then
 		ChatMessage.PrintUser(L["TSM failed to scan some auctions. Please rerun the scan."])
@@ -119,35 +86,68 @@ function private.ScanThread(auctionScan)
 	return true
 end
 
-function private.QueryFilter(_, row)
-	local itemString = row:GetItemString()
+function private.QueryFilter(_, row, isSubRow, itemKey)
+	if isSubRow and row.HasRawData and not row:HasRawData() then
+		return false
+	end
+
+	local itemString = private.GetRowItemString(row)
 	if not itemString then
+		return false
+	end
+
+	local _, itemBuyout, minItemBuyout = row:GetBuyouts(itemKey)
+	itemBuyout = itemBuyout or minItemBuyout
+	if not itemBuyout then
+		return false
+	elseif itemBuyout == 0 then
 		return true
 	end
-	local _, itemBuyout = row:GetBuyouts()
-	if not itemBuyout or itemBuyout == 0 then
-		return true
-	end
+
 	local marketValue = private.GetMarketValue(itemString)
 	if not marketValue or marketValue == 0 then
 		return true
 	end
-	return itemBuyout > marketValue * (Math.Bound(private.settings.maxPricePct, 1, 1000) / 100)
+
+	local minMarketValue = CustomString.GetValue(private.settings.minMarketValue, itemString) or 0
+	if marketValue < minMarketValue then
+		return true
+	end
+
+	local totalQuantity, numAuctions = row:GetQuantities()
+	local availableCount = isSubRow and numAuctions or totalQuantity
+	if availableCount and availableCount < max(private.settings.minAuctions, 0) then
+		return true
+	end
+
+	local isFiltered = itemBuyout > marketValue * (Math.Bound(private.settings.maxPricePct, 1, 1000) / 100)
+	if not isFiltered then
+		if not private.maxQuantity[itemString] then
+			private.numMatches = private.numMatches + 1
+		end
+		private.maxQuantity[itemString] = private.maxQuantity[itemString] or private.settings.maxBuyQuantity
+	end
+	return isFiltered
+end
+
+function private.QueryIsBrowseDoneFunction()
+	return private.numMatches >= private.settings.maxCandidates
 end
 
 function private.MarketValueFunction(row)
-	return private.GetMarketValue(row:GetItemString() or row:GetBaseItemString())
+	return private.GetMarketValue(private.GetRowItemString(row))
+end
+
+function private.GetRowItemString(row)
+	if row:IsSubRow() and row.HasRawData and not row:HasRawData() then
+		return nil
+	end
+	return row:GetItemString() or row:GetBaseItemString()
 end
 
 function private.GetMarketValue(itemString)
-	return CustomString.GetValue(private.settings.valueSource, itemString)
-end
-
-function private.ItemSort(a, b)
-	local aScore = private.itemScore[a] or math.huge
-	local bScore = private.itemScore[b] or math.huge
-	if aScore ~= bScore then
-		return aScore < bScore
+	if not itemString then
+		return nil
 	end
-	return a < b
+	return CustomString.GetValue(private.settings.valueSource, itemString)
 end

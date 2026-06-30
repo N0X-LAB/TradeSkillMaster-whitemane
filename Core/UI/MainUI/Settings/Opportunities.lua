@@ -14,9 +14,9 @@ local private = {
 local SETTING_TOOLTIPS = {
 	valueSource = "The market value source Opportunities compares against.",
 	maxPricePct = "Auctions must be at or below this percentage of the configured value source.",
-	minMarketValue = "Items below this market value are ignored.",
-	minAuctions = "Items must have at least this many auctions in your local AuctionDB data.",
-	maxCandidates = "The maximum number of locally-matched items to scan.",
+	minMarketValue = "Items whose configured value source is below this custom price are ignored.",
+	minAuctions = "Items must have at least this much available quantity in the browse results.",
+	maxCandidates = "The scan stops after this many matching opportunities are found.",
 	maxBuyQuantity = "The maximum quantity TSM will suggest buying for a single item.",
 }
 
@@ -56,7 +56,7 @@ function private.GetSettingsFrame()
 			:AddChild(TSM.MainUI.Settings.CreateInputWithReset("minMarketValue", "Minimum market value", private.settings, "minMarketValue", nil, nil, SETTING_TOOLTIPS.minMarketValue)
 				:SetMargin(0, 0, 0, 12)
 			)
-			:AddChild(private.CreateNumberInput("minAuctions", "Minimum auctions", "0:999999", SETTING_TOOLTIPS.minAuctions))
+			:AddChild(private.CreateNumberInput("minAuctions", "Minimum quantity", "0:999999", SETTING_TOOLTIPS.minAuctions))
 			:AddChild(private.CreateNumberInput("maxCandidates", L["Maximum candidates"], "1:9999", SETTING_TOOLTIPS.maxCandidates))
 			:AddChild(private.CreateNumberInput("maxBuyQuantity", "Maximum buy quantity", "1:999999", SETTING_TOOLTIPS.maxBuyQuantity))
 		)

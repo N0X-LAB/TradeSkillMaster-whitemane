@@ -29,6 +29,7 @@ local RESULT = EnumType.NewNested("AUCTIONING_OPERATION_RESULT", {
 			STACK_SIZE = EnumType.NewValue(),
 			KEEP_QUANTITY = EnumType.NewValue(),
 			MAX_EXPIRES = EnumType.NewValue(),
+			POST_SIZE = EnumType.NewValue(),
 			MIN_PRICE = EnumType.NewValue(),
 			MAX_PRICE = EnumType.NewValue(),
 			NORMAL_PRICE = EnumType.NewValue(),
@@ -74,6 +75,7 @@ local RESULT = EnumType.NewNested("AUCTIONING_OPERATION_RESULT", {
 		AT_NORMAL = EnumType.NewValue(),
 		AT_ABOVE_MAX = EnumType.NewValue(),
 		AT_WHITELIST = EnumType.NewValue(),
+		AT_IGNORED_SELLER = EnumType.NewValue(),
 	},
 	CANCELING_NOT_NEEDED = {
 		BID = EnumType.NewValue(),
@@ -103,6 +105,7 @@ local VALID_PRICE_KEYS = {
 	priceReset = true,
 	aboveMax = true,
 	postCap = true,
+	postSize = true,
 	stackSize = true,
 	keepQuantity = true,
 	maxExpires = true,
@@ -193,6 +196,7 @@ function AuctioningOperation.Load(localizedName, defaultZeroUndercut, includeBla
 		keepQuantity = { min = 0, max = 50000 },
 		maxExpires = { min = 0, max = 50000 },
 		postCap = { min = 0, max = maxStackSizeFunc and 200 or 50000 },
+		postSize = { min = 1, max = 50000 },
 		stackSize = maxStackSizeFunc and { min = 1, max = 200 } or nil,
 	}
 	if not defaultZeroUndercut then
@@ -202,6 +206,7 @@ function AuctioningOperation.Load(localizedName, defaultZeroUndercut, includeBla
 		:SetCustomSanitizeFunc(private.SanitizeSettings)
 		:AddNumberSetting("ignoreLowDuration")
 		:AddCustomStringSetting("postCap", "5")
+		:AddCustomStringSetting("postSize", "1")
 		:AddCustomStringSetting("keepQuantity", "0")
 		:AddCustomStringSetting("maxExpires", "0")
 		:AddNumberSetting("duration", 2, private.SanitizeDuration)
@@ -217,9 +222,8 @@ function AuctioningOperation.Load(localizedName, defaultZeroUndercut, includeBla
 		:AddBooleanSetting("cancelUndercut", true)
 		:AddBooleanSetting("cancelRepost", true)
 		:AddCustomStringSetting("cancelRepostThreshold", "1g")
-	if includeBlacklist then
-		operationType:AddStringSetting("blacklist")
-	end
+		:AddStringSetting("cancelIgnoreSeller", "", private.SanitizePlayerList)
+		:AddStringSetting("blacklist", "", private.SanitizePlayerList)
 	if maxStackSizeFunc then
 		operationType:AddBooleanSetting("matchStackSize")
 		operationType:AddCustomStringSetting("stackSize", "1")
@@ -229,7 +233,7 @@ function AuctioningOperation.Load(localizedName, defaultZeroUndercut, includeBla
 end
 
 ---Gets the min and max value for a setting.
----@param key "keepQuantity"|"maxExpires"|"postCap"|"stackSize"
+---@param key "keepQuantity"|"maxExpires"|"postCap"|"postSize"|"stackSize"
 ---@return number minVal
 ---@return number maxVal
 function AuctioningOperation.GetMinMaxValues(key)
@@ -242,7 +246,6 @@ end
 ---@param operationName string The operation name
 ---@param player string The name of the player to remove
 function AuctioningOperation.RemoveBlacklistPlayer(operationName, player)
-	assert(private.includeBlacklist)
 	local operation = Operation.GetSettings(OPERATION_TYPE, operationName)
 	if operation.blacklist == player then
 		operation.blacklist = ""
@@ -293,7 +296,15 @@ end
 ---@param playerName string The player name
 ---@return boolean
 function AuctioningOperation.IsBlacklisted(operationSettings, playerName)
-	return String.SeparatedContains(strlower(operationSettings.blacklist), ",", strlower(playerName))
+	return private.PlayerListContains(operationSettings.blacklist, playerName)
+end
+
+---Returns whether or not cancel scans should ignore the seller.
+---@param operationSettings OperationSettings The operation settings
+---@param playerName string The player name
+---@return boolean
+function AuctioningOperation.IsCancelIgnoredSeller(operationSettings, playerName)
+	return private.PlayerListContains(operationSettings.cancelIgnoreSeller, playerName)
 end
 
 ---Returns whether or not more scan data is needed to make a posting decision.
@@ -349,6 +360,10 @@ function AuctioningOperation.ValidateForPosting(itemString, num, operationName, 
 			return nil
 		end
 	else
+		local postSize = AuctioningOperation.GetItemPrice(itemString, "postSize", operationSettings)
+		if not postSize then
+			return nil, RESULT.INVALID.ITEM_GROUP.POST_SIZE, operationSettings.postSize
+		end
 		minPostQuantity = 1
 	end
 
@@ -528,8 +543,9 @@ end
 ---@param maxStackSize? number The max stack size (only required if configured with maxStackSizeFunc)
 ---@return number maxCanPost
 ---@return number perAuction
+---@return number extraStack
 function AuctioningOperation.GetPostQuantities(itemString, operationSettings, numHave)
-	local perAuction, maxCanPost = nil, nil
+	local perAuction, maxCanPost, extraStack = nil, nil, 0
 	local postCap = AuctioningOperation.GetItemPrice(itemString, "postCap", operationSettings)
 	if private.maxStackSizeFunc then
 		local stackSize = AuctioningOperation.GetItemPrice(itemString, "stackSize", operationSettings)
@@ -550,10 +566,13 @@ function AuctioningOperation.GetPostQuantities(itemString, operationSettings, nu
 			end
 		end
 	else
-		perAuction = min(postCap, numHave)
-		maxCanPost = 1
+		local totalToPost = min(postCap, numHave)
+		local postSize = AuctioningOperation.GetItemPrice(itemString, "postSize", operationSettings)
+		perAuction = min(postSize, totalToPost)
+		maxCanPost = floor(totalToPost / perAuction)
+		extraStack = totalToPost % perAuction
 	end
-	return maxCanPost, perAuction, postCap
+	return maxCanPost, perAuction, postCap, extraStack
 end
 
 ---Validates an operation for canceling.
@@ -621,6 +640,8 @@ function AuctioningOperation.MakeCancelDecision(itemString, operationSettings, l
 		end
 	elseif lowestAuction.hasInvalidSeller then
 		return false, AuctioningOperation.RESULT.INVALID.SELLER
+	elseif lowestAuction.isCancelIgnoredSeller then
+		return true, RESULT.NOT_CANCELING.AT_IGNORED_SELLER
 	end
 
 	local minPrice = AuctioningOperation.GetItemPrice(itemString, "minPrice", operationSettings)
@@ -716,6 +737,30 @@ function private.SanitizeUndercut(value)
 		return "0c"
 	end
 	return value
+end
+
+function private.SanitizePlayerList(value)
+	local result = {}
+	for player in String.SplitIterator(value, ",") do
+		player = strtrim(player)
+		if player ~= "" and player == String.Escape(player) and not tContains(result, player) then
+			tinsert(result, player)
+		end
+	end
+	return table.concat(result, ",")
+end
+
+function private.PlayerListContains(list, playerName)
+	if not list or list == "" or playerName == "" or playerName == "?" then
+		return false
+	end
+	playerName = strlower(strtrim(playerName))
+	for player in String.SplitIterator(list, ",") do
+		if strlower(strtrim(player)) == playerName then
+			return true
+		end
+	end
+	return false
 end
 
 function private.GetBidPrice(buyout, operationSettings, bidUndercut)

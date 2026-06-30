@@ -1269,6 +1269,9 @@ function AuctionScrollTable.__private:_IsRowFavorite(row)
 end
 
 function AuctionScrollTable.__private:_HasFavoriteColumn()
+	if not self._settings then
+		return false
+	end
 	for _, colSettings in ipairs(self:_GetSettingsValue().cols) do
 		if colSettings.id == "favorite" and not colSettings.hidden then
 			return true

@@ -31,6 +31,9 @@ local ABOVE_MAX_KEYS = { "none", "minPrice", "maxPrice", "normalPrice" }
 local POST_CAP_VALIDATE_CONTEXT = {
 	isNumber = true,
 }
+local POST_SIZE_VALIDATE_CONTEXT = {
+	isNumber = true,
+}
 local STACK_SIZE_VALIDATE_CONTEXT = {
 	isNumber = true,
 }
@@ -55,6 +58,7 @@ local SETTING_TOOLTIPS = {
 	matchStackSize = L["Enables this causes TSM to ignores auctions which aren't of the same stack size as you have set in the Posting settings and only undercut other auctions which match your stack size."],
 	stackSizeIsCap = L["Whether or not to post a partial stack if you don't have a full stack in your inventory."],
 	stackSize = L["The stack size to post on the AH."],
+	postSize = L["The number of items to post per auction."],
 	duration = L["How long auctions are listed for on the AH."],
 	postCap = ClientInfo.HasFeature(ClientInfo.FEATURES.AH_STACKS) and L["The maximum number of stacks to post on the AH."] or L["The maximum number of items to post on the AH."],
 	keepQuantity = L["The number of items to keep in your bags and not post on the AH. Set this to 0 to disable it."],
@@ -70,6 +74,7 @@ local SETTING_TOOLTIPS = {
 	cancelUndercut = L["Cancel auctions which have been undercut when running a Cancel Scan."],
 	cancelRepost = L["Cancel auctions which can be reposted higher when running a Cancel Scan."],
 	cancelRepostThreshold = L["Only cancel auctions which can be posted at least this much higher."],
+	cancelIgnoreSeller = L["A comma-separated list of seller names to ignore when they are the top seller during a Cancel Scan."],
 }
 
 
@@ -81,6 +86,7 @@ local SETTING_TOOLTIPS = {
 function Auctioning.OnInitialize()
 	-- Set min and max values
 	POST_CAP_VALIDATE_CONTEXT.minValue, POST_CAP_VALIDATE_CONTEXT.maxValue = AuctioningOperation.GetMinMaxValues("postCap")
+	POST_SIZE_VALIDATE_CONTEXT.minValue, POST_SIZE_VALIDATE_CONTEXT.maxValue = AuctioningOperation.GetMinMaxValues("postSize")
 	if ClientInfo.HasFeature(ClientInfo.FEATURES.AH_STACKS) then
 		STACK_SIZE_VALIDATE_CONTEXT.minValue, STACK_SIZE_VALIDATE_CONTEXT.maxValue = AuctioningOperation.GetMinMaxValues("stackSize")
 	end
@@ -161,6 +167,7 @@ function private.GetPostingSettings()
 			:AddChild(TSM.MainUI.Operations.CreateLinkedPriceInput("postCap", L["Post cap"], POST_CAP_VALIDATE_CONTEXT, nil, nil, SETTING_TOOLTIPS.postCap)
 				:SetMargin(0, 0, 0, 12)
 			)
+			:AddChildrenWithFunction(private.AddPostSizeSettings)
 			:AddChildrenWithFunction(private.AddStackSizeSettings)
 			:AddChild(TSM.MainUI.Operations.CreateLinkedPriceInput("keepQuantity", L["Amount kept in bags"], KEEP_QUANTITY_VALIDATE_CONTEXT, nil, nil, SETTING_TOOLTIPS.keepQuantity)
 				:SetMargin(0, 0, 0, 12)
@@ -255,6 +262,15 @@ function private.AddStackSizeSettings(frame)
 	frame:AddChild(private.CreateToggleLine("stackSizeIsCap", L["Allow partial stack"]))
 end
 
+function private.AddPostSizeSettings(frame)
+	if ClientInfo.HasFeature(ClientInfo.FEATURES.AH_STACKS) then
+		return
+	end
+	frame:AddChild(TSM.MainUI.Operations.CreateLinkedPriceInput("postSize", L["Post size"], POST_SIZE_VALIDATE_CONTEXT, nil, nil, SETTING_TOOLTIPS.postSize)
+		:SetMargin(0, 0, 0, 12)
+	)
+end
+
 function private.GetCancelingSettings()
 	UIUtils.AnalyticsRecordPathChange("main", "operations", "auctioning", "canceling")
 	return UIElements.New("ScrollFrame", "settings")
@@ -263,6 +279,18 @@ function private.GetCancelingSettings()
 			:AddChild(private.CreateToggleLine("cancelUndercut", L["Cancel undercut auctions"]))
 			:AddChild(private.CreateToggleLine("cancelRepost", L["Cancel to repost higher"]))
 			:AddChild(TSM.MainUI.Operations.CreateLinkedPriceInput("cancelRepostThreshold", L["Repost threshold"], nil, nil, nil, SETTING_TOOLTIPS.cancelRepostThreshold))
+			:AddChild(TSM.MainUI.Operations.CreateLinkedSettingLine("cancelIgnoreSeller", L["Ignored top sellers"])
+				:SetMargin(0, 0, 0, 12)
+				:AddChild(UIElements.New("Input", "input")
+					:SetHeight(24)
+					:SetBackgroundColor("ACTIVE_BG")
+					:SetHintText(L["Enter player name"])
+					:SetClearButtonEnabled(true)
+					:SetDisabled(Operation.HasRelationship("Auctioning", private.currentOperationName, "cancelIgnoreSeller"))
+					:SetSettingInfo(Operation.GetSettings("Auctioning", private.currentOperationName), "cancelIgnoreSeller")
+					:SetTooltip(SETTING_TOOLTIPS.cancelIgnoreSeller, "__parent")
+				)
+			)
 		)
 end
 
@@ -280,9 +308,6 @@ function private.GetAuctioningSettings(self, button)
 end
 
 function private.AddBlacklistPlayers(frame)
-	if not ClientInfo.HasFeature(ClientInfo.FEATURES.AH_SELLERS) then
-		return
-	end
 	frame:AddChild(TSM.MainUI.Operations.CreateLinkedSettingLine("blacklist", L["Blacklisted players"])
 		:AddChild(UIElements.New("Input", "input")
 			:SetHeight(24)
